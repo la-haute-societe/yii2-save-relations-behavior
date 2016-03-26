@@ -29,8 +29,8 @@ class SaveRelationsBehavior extends Behavior
     {
         return [
             ActiveRecord::EVENT_BEFORE_VALIDATE => 'beforeValidate',
-            ActiveRecord::EVENT_AFTER_INSERT    => 'afterSave',
-            ActiveRecord::EVENT_AFTER_UPDATE    => 'afterSave',
+            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
+            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
         ];
     }
 
@@ -218,7 +218,6 @@ class SaveRelationsBehavior extends Behavior
         return true;
     }
 
-
     /**
      *
      * @param ActiveRecord $model
@@ -248,7 +247,8 @@ class SaveRelationsBehavior extends Behavior
         $relationName,
         ActiveRecord $relationModel,
         ModelEvent $event
-    ) {
+    )
+    {
         /** @var ActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {

@@ -1,7 +1,13 @@
 Yii2 Active Record Save Relations Behavior
 ==========================================
-Automatically validate and save Active Record related models.
-Both Has Many and Has One relations are supported.
+Automatically validate and save related Active Record models.
+
+Features
+--------
+- Both `hasMany()` and `hasOne()` relations are supported
+- Works with existing as well as new models
+- Composite primary keys are supported
+- Only pure Active Record API is used so it should work with any DB driver
 
 Installation
 ------------
@@ -11,13 +17,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require --prefer-dist lhs/yii2-save-relations-behavior "*"
+php composer.phar require --prefer-dist la-haute-societe/yii2-save-relations-behavior "*"
 ```
 
 or add
 
 ```
-"lhs/yii2-save-relations-behavior": "*"
+"la-haute-societe/yii2-save-relations-behavior": "*"
 ```
 
 to the require section of your `composer.json` file.
@@ -66,7 +72,7 @@ class Project extends \yii\db\ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getMyModelUsers()
+    public function getProjectUsers()
     {
         return $this->hasMany(ProjectUser::className(), ['project_id' => 'id']);
     }
@@ -81,27 +87,46 @@ class Project extends \yii\db\ActiveRecord
 
 }
 ```
-Though not mandatory, it is highly recommended to activate the transactions
+> Though not mandatory, it is highly recommended to activate the transactions for the owner model.
 
 
 Usage
 -----
 
-Every declared relations in the `relations` behavior parameter can now be set as follow:
+Every declared relations in the `relations` behavior parameter can now be set and saved as follow:
 ```php
-// Has one relation using a model
-$model = MyModel::findOne(321);
-$company = Company::findOne(123);
-$model->company = $company;
-$model->save();
+$project = new Project();
+$project->name = "New project";
+$project->company = Company::findOne(2);
+$project->users = User::findAll([1,3]);
+$project->save();
 ```
-
-or
+You can set related model by only specifying its primary key:
+```php
+$project = new Project();
+$project->name = "Another project";
+$project->company = 2;
+$project->users = [1,3];
+$project->save();
+```
+You can even set related models as associative arrays like this:
 
 ```php
-// Has one relation using a foreign key
-$model = MyModel::findOne(321);
-$model->company = 123; // or $model->company = ['id' => 123];
-$model->save();
+$project = Project::findOne(1);
+$project->company = ['name' => 'GiHub', 'description' => 'Awesome'];
+$project->save();
 ```
+Attributes of the related model will be massively assigned using the `load() method. So remember to declare the according attributes as safe in the rules of the related model.
+
+> **Notes:**
+> - Related models are saved during the EVENT_BEFORE_VALIDATE event of the owner model. Transaction will start at this point according to the transactions() method of the model.
+> - Only newly created or changed related models will be saved.
+
+> See the PHPUnit tests for more examples.
+
+Validation
+----------
+Every declared related models will be validated prior to be saved. If any validation fails, an error associated with the named relation will be added to the owner model.
+
+For `hasMany()` relations, the index of the related model will be used to identifiy the associated error.
 
