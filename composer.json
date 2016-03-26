@@ -1,0 +1,35 @@
+{
+    "name": "la-haute-societe/yii2-save-relations-behavior",
+    "description": "Automatically validate and save related Active Record  models.",
+    "type": "yii2-extension",
+    "keywords": [
+        "yii2",
+        "extension",
+        "active-record",
+        "active-query",
+        "database",
+        "behavior",
+        "relations",
+        "has_many",
+        "has_one"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alban Jubert",
+            "email": "alban@lahautesociete.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": ">=2.0.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "lhs\\Yii2SaveRelationsBehavior\\": "src/"
+        }
+    },
+    "config": {
+        "process-timeout": 1800,
+        "preferred-install": "dist"
+    }
+}
