@@ -1,6 +1,6 @@
 {
     "name": "la-haute-societe/yii2-save-relations-behavior",
-    "description": "Automatically validate and save related Active Record  models.",
+    "description": "Validate and save automatically related Active Record models.",
     "type": "yii2-extension",
     "keywords": [
         "yii2",
