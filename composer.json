@@ -10,8 +10,8 @@
         "database",
         "behavior",
         "relations",
-        "has_many",
-        "has_one"
+        "has-many",
+        "has-one"
     ],
     "license": "MIT",
     "authors": [
