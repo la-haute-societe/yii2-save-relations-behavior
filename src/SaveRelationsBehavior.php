@@ -13,7 +13,7 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 
 /**
- * This Active Record Behavior allows to save the Model relations when the save() method is invoked.
+ * This Active Record Behavior allows to validate and save the Model relations when the save() method is invoked.
  * List of handled relations should be declared using the $relations parameter via an array of relation names.
  * @author albanjubert
  */
@@ -48,7 +48,8 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Override canSetProperty method to be able to detect if a relation setter is allowed
+     * Override canSetProperty method to be able to detect if a relation setter is allowed.
+     * Setter is allowed if the relation is declared in the `relations` parameter
      * @param string $name
      * @param boolean $checkVars
      * @return boolean
@@ -65,8 +66,8 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Override __set method to be able to set relations values either by providing related primary keys
-     * or instance of related model
+     * Override __set method to be able to set relations values either by providing a model instance,
+     * a primary key value or an associative array
      * @param string $name
      * @param mixed $value
      */
@@ -105,7 +106,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Get an ActiveRecord model using the given $data parameter.
-     * $data could either be a model ID or a model associative array representing its attributes => values
+     * $data could either be a model ID or an associative array representing model attributes => values
      * @param mixed $data
      * @param \yii\db\ActiveQuery $relation
      * @return ActiveRecord
@@ -141,8 +142,8 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Before the owner model validation, for has one relations, set the according foreign keys of the owner model
-     * to be able to validate it
+     * Before the owner model validation, save related models.
+     * For `hasOne()` relations, set the according foreign keys of the owner model to be able to validate it
      * @param ModelEvent $event
      */
     public function beforeValidate(ModelEvent $event)
@@ -219,7 +220,7 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     *
+     * Validate and save the model if it is new or changed
      * @param ActiveRecord $model
      * @param ModelEvent $event
      * @param $pettyRelationName
@@ -236,7 +237,7 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Validate a relation model and add an error message to owner attribute if needed
+     * Validate a relation model and add an error message to owner model attribute if needed
      * @param string $pettyRelationName
      * @param string $relationName
      * @param ActiveRecord $relationModel
@@ -265,11 +266,9 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Save the related models.
+     * Link the related models.
      * If the models have not been changed, nothing will be done.
-     * Otherwise, new related records will be created, changed related records will be update and linked to the owner
-     * using the ActiveRecord link() method.
-     * Unchanged records will stay untouched.
+     * Related records will be linked to the owner model using the ActiveRecord `link()` method.
      * @param ModelEvent $event
      */
     public function afterSave()
