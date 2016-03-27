@@ -113,7 +113,8 @@ You can even set related models as associative arrays like this:
 
 ```php
 $project = Project::findOne(1);
-$project->company = ['name' => 'GiHub', 'description' => 'Awesome'];
+$project->company = ['name' => 'GiHub', 'description' => 'Awesome']; // Will create a new company record
+// $project->company = ['id' => 3, 'name' => 'GiHub', 'description' => 'Awesome']; // Will update an existing company record
 $project->save();
 ```
 Attributes of the related model will be massively assigned using the `load() method. So remember to declare the according attributes as safe in the rules of the related model.
