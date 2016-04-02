@@ -2,10 +2,12 @@ Yii2 Active Record Save Relations Behavior
 ==========================================
 Automatically validate and save related Active Record models.
 
+[![Latest Stable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/stable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![Total Downloads](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/downloads)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![Latest Unstable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/unstable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![License](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/license)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
+
 Features
 --------
 - Both `hasMany()` and `hasOne()` relations are supported
-- Works with existing as well as new models
+- Works with existing as well as new related models
 - Composite primary keys are supported
 - Only pure Active Record API is used so it should work with any DB driver
 
@@ -127,7 +129,7 @@ Attributes of the related model will be massively assigned using the `load() met
 
 Validation
 ----------
-Every declared related models will be validated prior to be saved. If any validation fails, an error associated with the named relation will be added to the owner model.
+Every declared related models will be validated prior to be saved. If any validation fails, for each related model attribute in error, an error associated with the named relation will be added to the owner model.
 
 For `hasMany()` relations, the index of the related model will be used to identifiy the associated error.
 
