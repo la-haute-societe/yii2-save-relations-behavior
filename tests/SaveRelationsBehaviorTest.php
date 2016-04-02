@@ -29,6 +29,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('project')->execute();
         $db->createCommand()->dropTable('user')->execute();
         $db->createCommand()->dropTable('company')->execute();
+        $db->createCommand()->dropTable('link_type')->execute();
         $db->createCommand()->dropTable('link')->execute();
         $db->createCommand()->dropTable('project_link')->execute();
         parent::tearDown();
@@ -66,10 +67,16 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->createIndex('company_id-name', 'project', 'company_id,name', true)->execute();
 
         $db->createCommand()->createTable('link', [
-            'language' => $migration->string(5)->notNull(),
-            'name'     => $migration->string()->notNull(),
-            'link'     => $migration->string()->notNull(),
+            'language'     => $migration->string(5)->notNull(),
+            'name'         => $migration->string()->notNull(),
+            'link'         => $migration->string()->notNull(),
+            'link_type_id' => $migration->integer(),
             'PRIMARY KEY(language, name)'
+        ])->execute();
+
+        $db->createCommand()->createTable('link_type', [
+            'id'   => $migration->primaryKey(),
+            'name' => $migration->string()->notNull()->unique()
         ])->execute();
 
         $db->createCommand()->createTable('project_link', [
@@ -108,9 +115,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             [2, 'Windows 10', 2]
         ])->execute();
 
-        $db->createCommand()->batchInsert('link', ['language', 'name', 'link'], [
-            ['fr', 'mac_os_x', 'http://www.apple.com/fr/osx/'],
-            ['en', 'mac_os_x', 'http://www.apple.com/osx/']
+        $db->createCommand()->batchInsert('link_type', ['id', 'name'], [
+            [1, 'public'],
+            [2, 'private']
+        ])->execute();
+
+        $db->createCommand()->batchInsert('link', ['language', 'name', 'link', 'link_type_id'], [
+            ['fr', 'mac_os_x', 'http://www.apple.com/fr/osx/', 1],
+            ['en', 'mac_os_x', 'http://www.apple.com/osx/', 1]
         ])->execute();
 
         $db->createCommand()->batchInsert('project_link', ['language', 'name', 'project_id'], [
@@ -278,7 +290,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(3, count($project->links), 'Project should have 3 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals(3, count($project->links), 'Project should have 3 links after save');
-        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link, 'Second link should be https://www.microsoft.com/fr-fr/windows/features');
+        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
+            'Second link should be https://www.microsoft.com/fr-fr/windows/features');
     }
 
     public function testSaveNewHasManyRelationWithCompositeFksAsArrayShouldSucceed()
@@ -293,8 +306,10 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(4, count($project->links), 'Project should have 4 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals(4, count($project->links), 'Project should have 4 links after save');
-        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link, 'Second link should be https://www.microsoft.com/fr-fr/windows/features');
-        $this->assertEquals("https://www.microsoft.com/en-us/windows/features", $project->links[3]->link, 'Third link should be https://www.microsoft.com/en-us/windows/features');
+        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
+            'Second link should be https://www.microsoft.com/fr-fr/windows/features');
+        $this->assertEquals("https://www.microsoft.com/en-us/windows/features", $project->links[3]->link,
+            'Third link should be https://www.microsoft.com/en-us/windows/features');
     }
 
     public function testSaveUpdatedHasManyRelationWithCompositeFksAsArrayShouldSucceed()
@@ -305,7 +320,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $links[1]->link = "http://www.otherlink.com/";
         $project->links = $links;
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals("http://www.otherlink.com/", $project->links[1]->link, 'Second link "Link" attribute should be "http://www.otherlink.com/"');
+        $this->assertEquals("http://www.otherlink.com/", $project->links[1]->link,
+            'Second link "Link" attribute should be "http://www.otherlink.com/"');
     }
 
     public function testSaveMixedRelationsShouldSucceed()
@@ -313,13 +329,35 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project = new Project();
         $project->name = "New project";
         $project->company = Company::findOne(2);
-        $users = User::findAll([1,3]);
+        $users = User::findAll([1, 3]);
         $this->assertEquals(0, count($project->users), 'Project should have 0 users before save');
         $project->users = $users; // Add users
         $this->assertEquals(2, count($project->users), 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals(2, count($project->users), 'Project should have 2 users after save');
         $this->assertEquals(2, $project->company_id, 'Company ID is not the one expected');
+    }
+
+    public function testSettingANullRelationShouldSucceed()
+    {
+        $link = new Link();
+        $link->language = 'en';
+        $link->name = 'yii';
+        $link->link = 'http://www.yiiframework.com';
+        $link->linkType = null;
+        $this->assertTrue($link->save(), 'Link could not be saved');
+        $this->assertNull($link->linkType, "Link type should be null");
+        $this->assertNull($link->link_type_id, "Link type id should be null");
+    }
+
+    public function testUnsettingARelationShouldSucceed()
+    {
+        $link = Link::findOne(['language' => 'fr', 'name' => 'mac_os_x']);
+        $this->assertEquals(1, $link->link_type_id, 'Link type id should be 1');
+        $link->linkType = null;
+        $this->assertTrue($link->save(), 'Link could not be saved');
+        $this->assertNull($link->linkType, "Link type should be null");
+        $this->assertNull($link->link_type_id, "Link type id should be null");
     }
 
 

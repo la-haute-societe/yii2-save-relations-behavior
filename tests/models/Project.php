@@ -2,7 +2,6 @@
 
 namespace tests\models;
 
-
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
 class Project extends \yii\db\ActiveRecord
@@ -21,7 +20,7 @@ class Project extends \yii\db\ActiveRecord
     public function behaviors()
     {
         return [
-            'translateable' => [
+            'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
                 'relations' => ['company', 'users', 'links']
             ],
@@ -50,7 +49,7 @@ class Project extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return ActiveQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getCompany()
     {
@@ -58,7 +57,7 @@ class Project extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return ActiveQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getProjectUsers()
     {
@@ -66,7 +65,7 @@ class Project extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return ActiveQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getUsers()
     {
@@ -74,7 +73,7 @@ class Project extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return ActiveQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getProjectLinks()
     {
@@ -82,7 +81,7 @@ class Project extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return ActiveQuery
+     * @return \yii\db\ActiveQuery
      */
     public function getLinks()
     {

@@ -9,6 +9,7 @@ use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
+use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 
@@ -29,8 +30,8 @@ class SaveRelationsBehavior extends Behavior
     {
         return [
             ActiveRecord::EVENT_BEFORE_VALIDATE => 'beforeValidate',
-            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
-            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+            ActiveRecord::EVENT_AFTER_INSERT    => 'afterSave',
+            ActiveRecord::EVENT_AFTER_UPDATE    => 'afterSave',
         ];
     }
 
@@ -74,7 +75,6 @@ class SaveRelationsBehavior extends Behavior
     public function __set($name, $value)
     {
         if (in_array($name, $this->relations)) {
-            //echo "Setting " . $name . "\n";
             /** @var ActiveRecord $model */
             $model = $this->owner;
             Yii::trace("Setting {$name} relation value", __METHOD__);
@@ -126,16 +126,16 @@ class SaveRelationsBehavior extends Behavior
         } else {
             $fks = $data;
         }
-        // Load existing model or create one if no key was provided
+        // Load existing model or create one if no key was provided and data is not empty
         /** @var ActiveRecord $relationModel */
         $relationModel = null;
         if (!empty($fks)) {
             $relationModel = $modelClass::findOne($fks);
         }
-        if (!$relationModel) {
+        if (!($relationModel instanceof ActiveRecord) && !empty($data)) {
             $relationModel = new $modelClass;
         }
-        if (is_array($data)) {
+        if (($relationModel instanceof ActiveRecord) && is_array($data)) {
             $relationModel->setAttributes($data);
         }
         return $relationModel;
@@ -248,8 +248,7 @@ class SaveRelationsBehavior extends Behavior
         $relationName,
         ActiveRecord $relationModel,
         ModelEvent $event
-    )
-    {
+    ) {
         /** @var ActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
@@ -301,7 +300,13 @@ class SaveRelationsBehavior extends Behavior
                         }
                     } else { // Has one relation
                         if ($this->_oldRelationValue[$relationName] != $model->{$relationName}) {
-                            $model->link($relationName, $model->{$relationName});
+                            if ($model->{$relationName} instanceof ActiveRecord) {
+                                $model->link($relationName, $model->{$relationName});
+                            } else {
+                                if ($this->_oldRelationValue[$relationName] instanceof ActiveRecord) {
+                                    $model->unlink($relationName, $this->_oldRelationValue[$relationName]);
+                                }
+                            }
                         }
                     }
                     unset($this->_oldRelationValue[$relationName]);
@@ -309,7 +314,7 @@ class SaveRelationsBehavior extends Behavior
             }
             $model->refresh();
             $this->_relationsSaveStarted = false;
-            if ($this->_transaction->isActive) {
+            if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
                 $this->_transaction->commit();
             }
         }
