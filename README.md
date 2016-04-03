@@ -131,5 +131,9 @@ Validation
 ----------
 Every declared related models will be validated prior to be saved. If any validation fails, for each related model attribute in error, an error associated with the named relation will be added to the owner model.
 
-For `hasMany()` relations, the index of the related model will be used to identifiy the associated error.
+For `hasMany()` relations, the index of the related model will be used to identifiy the associated error message.
+
+
+> **Tips :**
+> For relations not involving a junction table by using the `via()` or `viaTable()` methods, you should remove the attributes pointing to the owner model to be able to pass the validations.
 

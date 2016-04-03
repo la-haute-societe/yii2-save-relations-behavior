@@ -196,14 +196,14 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false) {
                             // Save Has one relation new record
                             $pettyRelationName = Inflector::camel2words($relationName, true);
-                            $this->_saveModelRecord($model->{$relationName}, $event, $pettyRelationName,
-                                $relationName);
+                            $this->_saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
                         } else {
                             // Save Has many relations new records
                             /** @var ActiveRecord $relationModel */
                             foreach ($model->{$relationName} as $i => $relationModel) {
                                 $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                                $this->_saveModelRecord($relationModel, $event, $pettyRelationName, $relationName);
+                                $this->_validateRelationModel($pettyRelationName, $relationName, $relationModel,
+                                    $event);
                             }
                         }
                     }
@@ -214,6 +214,7 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+            $event->isValid = false; // Stop saving, something went wrong
             return false;
         }
         return true;
@@ -281,8 +282,24 @@ class SaveRelationsBehavior extends Behavior
                     Yii::trace("Linking {$relationName} relation", __METHOD__);
                     $relation = $model->getRelation($relationName);
                     if ($relation->multiple === true) { // Has many relation
+                        // Process new relations
+                        $existingRecords = [];
+                        foreach ($model->{$relationName} as $relationModel) {
+                            if ($relationModel->isNewRecord) {
+                                if ($relation->via !== null) {
+                                    $relationModel->save(false);
+                                }
+                                $model->link($relationName, $relationModel);
+                            } else {
+                                $existingRecords[] = $relationModel;
+                            }
+                            if (count($relationModel->dirtyAttributes)) {
+                                $relationModel->save(false);
+                            }
+                        }
+                        // Process existing added and deleted relations
                         list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName],
-                            $model->{$relationName});
+                            $existingRecords);
                         // Deleted relations
                         $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName],
                             function (ActiveRecord $model) {

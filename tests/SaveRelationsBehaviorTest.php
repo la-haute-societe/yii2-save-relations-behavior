@@ -320,6 +320,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $links[1]->link = "http://www.otherlink.com/";
         $project->links = $links;
         $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertEquals(2, count($project->links), 'Project should have 2 links before save');
         $this->assertEquals("http://www.otherlink.com/", $project->links[1]->link,
             'Second link "Link" attribute should be "http://www.otherlink.com/"');
     }
