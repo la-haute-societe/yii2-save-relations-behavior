@@ -214,66 +214,66 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     {
         $project = Project::findOne(1);
         $user = User::findOne(3);
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users before save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = array_merge($project->users, [$user]); // Add new user to the existing list
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after assignment');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after save');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after save');
     }
 
     public function testSaveAddedExistingHasManyRelationAsArrayShouldSucceed()
     {
         $project = Project::findOne(1);
         $user = ['id' => 3];
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users before save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = array_merge($project->users, [$user]); // Add new user to the existing list
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after assignment');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after save');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after save');
     }
 
     public function testSaveAddedExistingHasManyRelationAsIDShouldSucceed()
     {
         $project = Project::findOne(1);
         $user = 3;
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users before save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = array_merge($project->users, [$user]); // Add new user to the existing list
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after assignment');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(3, count($project->users), 'Project should have 3 users after save');
+        $this->assertCount(3, $project->users, 'Project should have 3 users after save');
     }
 
     public function testSaveDeletedExistingHasManyRelationShouldSucceed()
     {
         $project = Project::findOne(1);
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users before save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = User::findAll([1]); // Change users by removing one
-        $this->assertEquals(1, count($project->users), 'Project should have 1 user after assignment');
+        $this->assertCount(1, $project->users, 'Project should have 1 user after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(1, count($project->users), 'Project should have 1 user after save');
+        $this->assertCount(1, $project->users, 'Project should have 1 user after save');
     }
 
     public function testSaveNewHasManyRelationAsModelShouldSucceed()
     {
         $project = Project::findOne(2);
-        $this->assertEquals(1, count($project->users), 'Project should have 1 user before save');
+        $this->assertCount(1, $project->users, 'Project should have 1 user before save');
         $user = new User();
         $user->username = "Steve Balmer";
         $project->users = array_merge($project->users, [$user]); // Add a fresh new user
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after assignment');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after save');
     }
 
     public function testSaveNewHasManyRelationAsArrayShouldSucceed()
     {
         $project = Project::findOne(2);
-        $this->assertEquals(1, count($project->users), 'Project should have 1 user before save');
+        $this->assertCount(1, $project->users, 'Project should have 1 user before save');
         $user = ['username' => "Steve Balmer"];
         $project->users = array_merge($project->users, [$user]); // Add a fresh new user
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after assignment');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after save');
         $this->assertEquals("Steve Balmer", $project->users[1]->username, 'Second user should be Steve Balmer');
         $this->assertNotEmpty($project->users[1]->id, 'Second user should have an ID');
     }
@@ -287,9 +287,9 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $link->name = 'windows10';
         $link->link = 'https://www.microsoft.com/fr-fr/windows/features';
         $project->links = array_merge($project->links, [$link]);
-        $this->assertEquals(3, count($project->links), 'Project should have 3 links after assignment');
+        $this->assertCount(3, $project->links, 'Project should have 3 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(3, count($project->links), 'Project should have 3 links after save');
+        $this->assertCount(3, $project->links, 'Project should have 3 links after save');
         $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
             'Second link should be https://www.microsoft.com/fr-fr/windows/features');
     }
@@ -303,9 +303,9 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             ['language' => 'en', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/en-us/windows/features']
         ];
         $project->links = array_merge($project->links, $links);
-        $this->assertEquals(4, count($project->links), 'Project should have 4 links after assignment');
+        $this->assertCount(4, $project->links, 'Project should have 4 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(4, count($project->links), 'Project should have 4 links after save');
+        $this->assertCount(4, $project->links, 'Project should have 4 links after save');
         $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
             'Second link should be https://www.microsoft.com/fr-fr/windows/features');
         $this->assertEquals("https://www.microsoft.com/en-us/windows/features", $project->links[3]->link,
@@ -320,7 +320,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $links[1]->link = "http://www.otherlink.com/";
         $project->links = $links;
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(2, count($project->links), 'Project should have 2 links before save');
+        $this->assertCount(2, $project->links, 'Project should have 2 links before save');
         $this->assertEquals("http://www.otherlink.com/", $project->links[1]->link,
             'Second link "Link" attribute should be "http://www.otherlink.com/"');
     }
@@ -331,11 +331,11 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project->name = "New project";
         $project->company = Company::findOne(2);
         $users = User::findAll([1, 3]);
-        $this->assertEquals(0, count($project->users), 'Project should have 0 users before save');
+        $this->assertCount(0, $project->users, 'Project should have 0 users before save');
         $project->users = $users; // Add users
         $this->assertEquals(2, count($project->users), 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after save');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after save');
         $this->assertEquals(2, $project->company_id, 'Company ID is not the one expected');
     }
 
@@ -359,6 +359,32 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($link->save(), 'Link could not be saved');
         $this->assertNull($link->linkType, "Link type should be null");
         $this->assertNull($link->link_type_id, "Link type id should be null");
+    }
+
+    public function testLoadRelationsShouldSucceed()
+    {
+        $project = Project::findOne(1);
+        $data = [
+            'Company'     => [
+                'name' => 'YiiSoft'
+            ],
+            'ProjectLink' => [
+                [
+                    'language' => 'en',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.com'
+                ],
+                [
+                    'language' => 'fr',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.fr'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
+        $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
     }
 
 

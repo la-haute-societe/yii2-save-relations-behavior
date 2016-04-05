@@ -160,7 +160,9 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
                             Yii::trace("Setting foreign keys for {$relationName}", __METHOD__);
                             foreach ($relation->link as $relatedAttribute => $modelAttribute) {
-                                $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
+                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute}) {
+                                    $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
+                                }
                             }
                         }
                     }
@@ -357,5 +359,25 @@ class SaveRelationsBehavior extends Behavior
         $deletedPks = array_values(array_diff($oldPks, $identicalPks));
         return [$addedPks, $deletedPks];
     }
+
+    /**
+     * Populates relations with input data
+     * @param array $data
+     */
+    public function loadRelations($data)
+    {
+        /** @var ActiveRecord $model */
+        $model = $this->owner;
+        foreach ($this->relations as $relationName) {
+            $relation = $model->getRelation($relationName);
+            $modelClass = $relation->modelClass;
+            $relationalModel = new $modelClass;
+            $formName = $relationalModel->formName();
+            if (array_key_exists($formName, $data)) {
+                $model->{$relationName} = $data[$formName];
+            }
+        }
+    }
+
 
 }
