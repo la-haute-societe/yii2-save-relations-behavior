@@ -58,9 +58,7 @@ class SaveRelationsBehavior extends Behavior
     public function canSetProperty($name, $checkVars = true)
     {
         $getter = 'get' . $name;
-        if (in_array($name, $this->relations) && method_exists($this->owner,
-                $getter) && $this->owner->$getter() instanceof ActiveQuery
-        ) {
+        if (in_array($name, $this->relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQuery) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
@@ -154,8 +152,7 @@ class SaveRelationsBehavior extends Behavior
             if ($this->_saveRelatedRecords($model, $event)) {
                 // If relation is has_one, try to set related model attributes
                 foreach ($this->relations as $relationName) {
-                    if (array_key_exists($relationName,
-                        $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                    if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
                             Yii::trace("Setting foreign keys for {$relationName}", __METHOD__);
@@ -182,17 +179,12 @@ class SaveRelationsBehavior extends Behavior
      */
     public function _saveRelatedRecords(ActiveRecord $model, ModelEvent $event)
     {
-        if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-            || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-            || $model->isTransactional($model::OP_ALL)
-        ) {
+        if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT)) || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE)) || $model->isTransactional($model::OP_ALL)) {
             $this->_transaction = $model->getDb()->beginTransaction();
         }
         try {
             foreach ($this->relations as $relationName) {
-
-                if (array_key_exists($relationName,
-                    $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                     $relation = $model->getRelation($relationName);
                     if (!empty($model->{$relationName})) {
                         if ($relation->multiple === false) {
@@ -204,8 +196,7 @@ class SaveRelationsBehavior extends Behavior
                             /** @var ActiveRecord $relationModel */
                             foreach ($model->{$relationName} as $i => $relationModel) {
                                 $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                                $this->_validateRelationModel($pettyRelationName, $relationName, $relationModel,
-                                    $event);
+                                $this->_validateRelationModel($pettyRelationName, $relationName, $relationModel, $event);
                             }
                         }
                     }
@@ -231,8 +222,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function _saveModelRecord(ActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
     {
-        $this->_validateRelationModel($pettyRelationName, $relationName, $model,
-            $event);
+        $this->_validateRelationModel($pettyRelationName, $relationName, $model, $event);
         if ($event->isValid && count($model->dirtyAttributes)) {
             Yii::trace("Saving {$pettyRelationName} relation model", __METHOD__);
             $model->save(false);
@@ -251,7 +241,8 @@ class SaveRelationsBehavior extends Behavior
         $relationName,
         ActiveRecord $relationModel,
         ModelEvent $event
-    ) {
+    )
+    {
         /** @var ActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
@@ -271,7 +262,6 @@ class SaveRelationsBehavior extends Behavior
      * Link the related models.
      * If the models have not been changed, nothing will be done.
      * Related records will be linked to the owner model using the ActiveRecord `link()` method.
-     * @param ModelEvent $event
      */
     public function afterSave()
     {
@@ -286,6 +276,7 @@ class SaveRelationsBehavior extends Behavior
                     if ($relation->multiple === true) { // Has many relation
                         // Process new relations
                         $existingRecords = [];
+                        /** @var ActiveRecord $relationModel */
                         foreach ($model->{$relationName} as $relationModel) {
                             if ($relationModel->isNewRecord) {
                                 if ($relation->via !== null) {
@@ -300,13 +291,11 @@ class SaveRelationsBehavior extends Behavior
                             }
                         }
                         // Process existing added and deleted relations
-                        list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName],
-                            $existingRecords);
+                        list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName], $existingRecords);
                         // Deleted relations
-                        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName],
-                            function (ActiveRecord $model) {
-                                return implode("-", $model->getPrimaryKey(true));
-                            });
+                        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (ActiveRecord $model) {
+                            return implode("-", $model->getPrimaryKey(true));
+                        });
                         foreach ($deletedPks as $key) {
                             $model->unlink($relationName, $initialModels[$key], true);
                         }
@@ -371,6 +360,7 @@ class SaveRelationsBehavior extends Behavior
         foreach ($this->relations as $relationName) {
             $relation = $model->getRelation($relationName);
             $modelClass = $relation->modelClass;
+            /** @var ActiveRecord $relationalModel */
             $relationalModel = new $modelClass;
             $formName = $relationalModel->formName();
             if (array_key_exists($formName, $data)) {
