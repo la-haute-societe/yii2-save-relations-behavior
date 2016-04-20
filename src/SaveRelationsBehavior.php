@@ -206,7 +206,9 @@ class SaveRelationsBehavior extends Behavior
                 throw new Exception("One of the related model could not be validated");
             }
         } catch (Exception $e) {
-            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+            if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
+                $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+            }
             $event->isValid = false; // Stop saving, something went wrong
             return false;
         }
