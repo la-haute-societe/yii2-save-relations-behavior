@@ -131,9 +131,42 @@ Validation
 ----------
 Every declared related models will be validated prior to be saved. If any validation fails, for each related model attribute in error, an error associated with the named relation will be added to the owner model.
 
-For `hasMany()` relations, the index of the related model will be used to identifiy the associated error message.
+For `hasMany()` relations, the index of the related model will be used to identify the associated error message.
 
 
 > **Tips :**
-> For relations not involving a junction table by using the `via()` or `viaTable()` methods, you should remove the attributes pointing to the owner model to be able to pass the validations.
+> For relations not involving a junction table by using the `via()` or `viaTable()` methods, you should remove the attributes pointing to the owner model from the 'required' validation rules to be able to pass the validations.
 
+Populate the model and its relations with input data
+----------------------------------------------------
+This behavior adds a convenient method to load relations models attributes in the same way that the load() method does.
+Simply call the `loadRelations()` with the according input data.
+
+For instance:
+```php
+$project = Project::findOne(1);
+/**
+ * $_POST could be something like:
+ * [
+ *     'Company'     => [
+ *         'name' => 'YiiSoft'
+ *     ],
+ *     'ProjectLink' => [
+ *         [
+ *             'language' => 'en',
+ *             'name'     => 'yii',
+ *             'link'     => 'http://www.yiiframework.com'
+ *         ],
+ *         [
+ *             'language' => 'fr',
+ *             'name'     => 'yii',
+ *             'link'     => 'http://www.yiiframework.fr'
+ *         ]
+ *     ]
+ * ];
+ */
+$project->loadRelations(Yii::$app->request->post());
+```
+
+You can even further simplify the process by adding the `SaveRelationsTrait` to your model.
+In that case, a call to the `load()` method will also automatically trigger a call to the `loadRelations()` method by using the same data, so you basically won't have to change your controllers.

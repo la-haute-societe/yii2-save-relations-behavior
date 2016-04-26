@@ -8,6 +8,7 @@ use SebastianBergmann\GlobalState\RuntimeException;
 use tests\models\Company;
 use tests\models\Link;
 use tests\models\Project;
+use tests\models\ProjectNoTransactions;
 use tests\models\User;
 use Yii;
 use yii\base\Model;
@@ -205,8 +206,27 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project->company = $company;
         $this->assertTrue($company->isNewRecord, 'Company should be a new record');
         $this->assertFalse($project->save(), 'Project could be saved');
-        $this->assertArrayHasKey('company', $project->getErrors(),
-            'Validation errors do not contain a message for company');
+        $this->assertArrayHasKey(
+            'company',
+            $project->getErrors(),
+            'Validation errors do not contain a message for company'
+        );
+        $this->assertEquals('Company: Name cannot be blank.', $project->getFirstError('company'));
+    }
+
+    public function testSaveInvalidModelWithNoTransactionsSetShouldFail()
+    {
+        $project = new ProjectNoTransactions();
+        $project->name = "Java";
+        $company = new Company();
+        $project->company = $company;
+        $this->assertTrue($company->isNewRecord, 'Company should be a new record');
+        $this->assertFalse($project->save(), 'Project could be saved');
+        $this->assertArrayHasKey(
+            'company',
+            $project->getErrors(),
+            'Validation errors do not contain a message for company'
+        );
         $this->assertEquals('Company: Name cannot be blank.', $project->getFirstError('company'));
     }
 
@@ -290,8 +310,11 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(3, $project->links, 'Project should have 3 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertCount(3, $project->links, 'Project should have 3 links after save');
-        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
-            'Second link should be https://www.microsoft.com/fr-fr/windows/features');
+        $this->assertEquals(
+            "https://www.microsoft.com/fr-fr/windows/features",
+            $project->links[2]->link,
+            'Second link should be https://www.microsoft.com/fr-fr/windows/features'
+        );
     }
 
     public function testSaveNewHasManyRelationWithCompositeFksAsArrayShouldSucceed()
@@ -306,10 +329,16 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(4, $project->links, 'Project should have 4 links after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertCount(4, $project->links, 'Project should have 4 links after save');
-        $this->assertEquals("https://www.microsoft.com/fr-fr/windows/features", $project->links[2]->link,
-            'Second link should be https://www.microsoft.com/fr-fr/windows/features');
-        $this->assertEquals("https://www.microsoft.com/en-us/windows/features", $project->links[3]->link,
-            'Third link should be https://www.microsoft.com/en-us/windows/features');
+        $this->assertEquals(
+            "https://www.microsoft.com/fr-fr/windows/features",
+            $project->links[2]->link,
+            'Second link should be https://www.microsoft.com/fr-fr/windows/features'
+        );
+        $this->assertEquals(
+            "https://www.microsoft.com/en-us/windows/features",
+            $project->links[3]->link,
+            'Third link should be https://www.microsoft.com/en-us/windows/features'
+        );
     }
 
     public function testSaveUpdatedHasManyRelationWithCompositeFksAsArrayShouldSucceed()
@@ -321,8 +350,11 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project->links = $links;
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertCount(2, $project->links, 'Project should have 2 links before save');
-        $this->assertEquals("http://www.otherlink.com/", $project->links[1]->link,
-            'Second link "Link" attribute should be "http://www.otherlink.com/"');
+        $this->assertEquals(
+            "http://www.otherlink.com/",
+            $project->links[1]->link,
+            'Second link "Link" attribute should be "http://www.otherlink.com/"'
+        );
     }
 
     public function testSaveMixedRelationsShouldSucceed()
@@ -386,6 +418,5 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
         $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
     }
-
 
 }

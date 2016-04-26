@@ -84,7 +84,7 @@ class SaveRelationsBehavior extends Behavior
             }
             if ($relation->multiple === true) {
                 $newRelations = [];
-                if(!is_array($value)){
+                if (!is_array($value)) {
                     $value = [];
                 }
                 foreach ($value as $entry) {
