@@ -40,7 +40,7 @@ use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
 class Project extends \yii\db\ActiveRecord
 {
-    use SaveRelationsTrait; // Optionnal
+    use SaveRelationsTrait; // Optional
 
     public function behaviors()
     {
