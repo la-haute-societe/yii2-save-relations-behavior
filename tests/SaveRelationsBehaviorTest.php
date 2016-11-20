@@ -4,7 +4,7 @@ namespace tests;
 
 
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
-use SebastianBergmann\GlobalState\RuntimeException;
+use RuntimeException;
 use tests\models\Company;
 use tests\models\Link;
 use tests\models\Project;
@@ -417,6 +417,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
         $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
+    }
+
+    public function testAssignSingleObjectToHasManyRelationShouldSucceed()
+    {
+        $project = new Project();
+        $user = User::findOne(1);
+        $project->users = $user;
+        $this->assertEquals(1, count($project->users), 'Project should have 1 users after assignment');
     }
 
 }

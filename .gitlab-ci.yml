@@ -1,0 +1,54 @@
+image: tetraweb/php:5.6
+
+cache:
+  key: "$CI_BUILD_NAME_$CI_BUILD_REF_NAME"
+  untracked: true
+  paths:
+    - /root/.composer
+
+stages:
+  - build
+  - test
+  - deploy
+
+before_script:
+  # enable needed php extensions
+    - docker-php-ext-enable mbstring zip xdebug
+    # composer update
+    - composer self-update && composer --version
+    - composer global require --no-interaction hirak/prestissimo
+    - composer global require --no-interaction "fxp/composer-asset-plugin:~1.2.0"
+    - composer global require --no-interaction phpunit/php-code-coverage
+    - export PATH="$HOME/.composer/vendor/bin:$PATH"
+
+build:
+  stage: build
+  script:
+    - composer install --dev --prefer-dist --no-interaction
+  artifacts:
+    name: "${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    expire_in: 1 week
+    untracked: true
+
+test:
+  stage: test
+  only:
+    - master
+  script:
+    - phpunit --coverage-text --colors=never --coverage-html tests/report
+  artifacts:
+      paths:
+        - tests/report
+
+deploy report:
+  stage: deploy
+  dependencies:
+    - test
+  script:
+      - mv tests/report/ public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  only:
+    - master
