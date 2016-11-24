@@ -45,7 +45,7 @@ deploy report:
   dependencies:
     - test
   script:
-      - mv tests/report/ public/
+      - mv -f tests/report/ public/
   artifacts:
     paths:
       - public
