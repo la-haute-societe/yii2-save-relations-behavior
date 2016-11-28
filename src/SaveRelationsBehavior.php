@@ -228,7 +228,7 @@ class SaveRelationsBehavior extends Behavior
     public function _saveModelRecord(ActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
     {
         $this->_validateRelationModel($pettyRelationName, $relationName, $model, $event);
-        if ($event->isValid && count($model->dirtyAttributes)) {
+        if ($event->isValid && (count($model->dirtyAttributes) || $model->isNewRecord)) {
             Yii::trace("Saving {$pettyRelationName} relation model", __METHOD__);
             $model->save(false);
         }
@@ -241,12 +241,7 @@ class SaveRelationsBehavior extends Behavior
      * @param ActiveRecord $relationModel
      * @param ModelEvent $event
      */
-    private function _validateRelationModel(
-        $pettyRelationName,
-        $relationName,
-        ActiveRecord $relationModel,
-        ModelEvent $event
-    )
+    private function _validateRelationModel($pettyRelationName, $relationName, ActiveRecord $relationModel, ModelEvent $event)
     {
         /** @var ActiveRecord $model */
         $model = $this->owner;
@@ -312,7 +307,7 @@ class SaveRelationsBehavior extends Behavior
                             $model->link($relationName, $actualModels[$key]);
                         }
                     } else { // Has one relation
-                        if ($this->_oldRelationValue[$relationName] != $model->{$relationName}) {
+                        if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
                             if ($model->{$relationName} instanceof ActiveRecord) {
                                 $model->link($relationName, $model->{$relationName});
                             } else {

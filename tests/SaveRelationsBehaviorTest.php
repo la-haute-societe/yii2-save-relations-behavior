@@ -6,8 +6,11 @@ namespace tests;
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 use RuntimeException;
 use tests\models\Company;
+use tests\models\DummyModel;
+use tests\models\DummyModelParent;
 use tests\models\Link;
 use tests\models\Project;
+use tests\models\ProjectLink;
 use tests\models\ProjectNoTransactions;
 use tests\models\User;
 use Yii;
@@ -33,6 +36,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('link_type')->execute();
         $db->createCommand()->dropTable('link')->execute();
         $db->createCommand()->dropTable('project_link')->execute();
+        $db->createCommand()->dropTable('dummy')->execute();
         parent::tearDown();
     }
 
@@ -94,6 +98,12 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             'PRIMARY KEY(project_id, user_id)'
         ])->execute();
 
+        // Dummy
+        $db->createCommand()->createTable('dummy', [
+            'id'        => $migration->primaryKey(),
+            'parent_id' => $migration->integer()
+        ])->execute();
+
         /**
          * Insert some data
          */
@@ -136,7 +146,6 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             [1, 4],
             [2, 2]
         ])->execute();
-
     }
 
     /**
@@ -425,6 +434,22 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $user = User::findOne(1);
         $project->users = $user;
         $this->assertEquals(1, count($project->users), 'Project should have 1 users after assignment');
+    }
+
+    public function testChangeHasOneRelationWithAnotherObject()
+    {
+        $dummy_a = new DummyModel();
+        $dummy_b = new DummyModel();
+        $dummy_a->save();
+        $dummy_b->save();
+        $dummy_a->children = $dummy_b;
+        $dummy_b->children = $dummy_a;
+        $this->assertTrue($dummy_a->save(), 'Dummy A could not be saved');
+        $this->assertTrue($dummy_b->save(), 'Dummy B could not be saved');
+        $dummy_c = new DummyModel();
+        //$this->assertTrue($dummy_c->save(), 'Dummy C could not be saved');
+        $dummy_a->children = $dummy_c;
+        $this->assertTrue($dummy_a->save(), 'Dummy A could not be saved');
     }
 
 }
