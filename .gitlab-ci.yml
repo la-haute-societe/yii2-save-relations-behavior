@@ -40,15 +40,3 @@ test:
       paths:
         - tests/report
 
-deploy report:
-  stage: deploy
-  dependencies:
-    - test
-  script:
-      - mv -f tests/report/ public/
-  artifacts:
-    paths:
-      - public
-    expire_in: 30 days
-  only:
-    - master
