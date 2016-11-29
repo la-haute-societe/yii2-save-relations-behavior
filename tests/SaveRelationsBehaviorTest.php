@@ -436,6 +436,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(1, count($project->users), 'Project should have 1 users after assignment');
     }
 
+    public function testAssignSingleEmptyObjectToHasManyRelationShouldSucceed()
+    {
+        $project = new Project();
+        $user = User::findOne(1);
+        $project->users = null;
+        $this->assertEquals(0, count($project->users), 'Project should have 0 users after assignment');
+    }
+
     public function testChangeHasOneRelationWithAnotherObject()
     {
         $dummy_a = new DummyModel();
@@ -447,7 +455,6 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($dummy_a->save(), 'Dummy A could not be saved');
         $this->assertTrue($dummy_b->save(), 'Dummy B could not be saved');
         $dummy_c = new DummyModel();
-        //$this->assertTrue($dummy_c->save(), 'Dummy C could not be saved');
         $dummy_a->children = $dummy_c;
         $this->assertTrue($dummy_a->save(), 'Dummy A could not be saved');
     }
