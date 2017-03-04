@@ -16,6 +16,7 @@ use tests\models\User;
 use Yii;
 use yii\base\Model;
 use yii\db\Migration;
+use yii\helpers\VarDumper;
 
 class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 {
@@ -257,7 +258,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = array_merge($project->users, [$user]); // Add new user to the existing list
         $this->assertCount(3, $project->users, 'Project should have 3 users after assignment');
-        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertTrue($project->save(), 'Project could not be saved'.VarDumper::dumpAsString($project->errors));
         $this->assertCount(3, $project->users, 'Project should have 3 users after save');
     }
 

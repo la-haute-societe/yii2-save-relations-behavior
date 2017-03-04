@@ -120,12 +120,24 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var ActiveRecord $modelClass */
         $modelClass = $relation->modelClass;
-        // get the related model foreign keys
+        // Get the related model foreign keys
         if (is_array($data)) {
             $fks = [];
-            foreach ($relation->link as $relatedAttribute => $modelAttribute) {
-                if (array_key_exists($relatedAttribute, $data) && !empty($data[$relatedAttribute])) {
-                    $fks[$relatedAttribute] = $data[$relatedAttribute];
+
+            // Get the right link definition
+            if ($relation->via instanceof ActiveRecord) {
+                $viaQuery = $relation->via;
+                $link = $viaQuery->link;
+            } elseif (is_array($relation->via)) {
+                list($viaName, $viaQuery) = $relation->via;
+                $link = $viaQuery->link;
+            } else {
+                $link = $relation->link;
+            }
+
+            foreach ($link as $relatedAttribute => $modelAttribute) {
+                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                    $fks[$modelAttribute] = $data[$modelAttribute];
                 }
             }
         } else {
