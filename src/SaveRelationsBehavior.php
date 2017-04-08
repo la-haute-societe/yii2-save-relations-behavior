@@ -8,6 +8,7 @@ use yii\base\Behavior;
 use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\db\ActiveQuery;
+use yii\db\ActiveQueryInterface;
 use yii\db\ActiveRecord;
 use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
@@ -58,7 +59,7 @@ class SaveRelationsBehavior extends Behavior
     public function canSetProperty($name, $checkVars = true)
     {
         $getter = 'get' . $name;
-        if (in_array($name, $this->relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQuery) {
+        if (in_array($name, $this->relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQueryInterface) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
