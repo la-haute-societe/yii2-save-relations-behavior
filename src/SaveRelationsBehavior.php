@@ -8,6 +8,7 @@ use yii\base\Behavior;
 use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\db\ActiveQueryInterface;
+use yii\db\ActiveQueryInterface;
 use yii\db\BaseActiveRecord;
 use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
