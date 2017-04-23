@@ -73,50 +73,67 @@ class SaveRelationsBehavior extends Behavior
     public function __set($name, $value)
     {
         if (in_array($name, $this->relations)) {
-            /** @var BaseActiveRecord $model */
-            $model = $this->owner;
             Yii::trace("Setting {$name} relation value", __METHOD__);
-            /** @var \yii\db\ActiveQuery $relation */
-            $relation = $model->getRelation($name);
             if (!isset($this->_oldRelationValue[$name])) {
-                //Yii::trace("Initializing old {$name} relation value", __METHOD__);
                 $this->_oldRelationValue[$name] = $this->owner->{$name};
             }
-            if ($relation->multiple === true) {
-                $newRelations = [];
-                if (!is_array($value)) {
-                    if (!empty($value)) {
-                        $value = [$value];
-                    } else {
-                        $value = [];
-                    }
-                }
-                foreach ($value as $entry) {
-                    if ($entry instanceof $relation->modelClass) {
-                        $newRelations[] = $entry;
-                    } else {
-                        // TODO handle this with one DB request to retrieve all models
-                        $newRelations[] = $this->_processModelAsArray($entry, $relation);
-                    }
-                }
-                $model->populateRelation($name, $newRelations);
+            if ($this->owner->getRelation($name)->multiple === true) {
+                $this->setMultipleRelation($name, $value);
             } else {
-                if (!($value instanceof $relation->modelClass)) {
-                    $value = $this->_processModelAsArray($value, $relation);
-                }
-                $model->populateRelation($name, $value);
+                $this->setSingleRelation($name, $value);
             }
         }
     }
 
     /**
-     * Get an BaseActiveRecord model using the given $data parameter.
+     * Set the named single relation with the given value
+     * @param $name
+     * @param $value
+     */
+    protected function setSingleRelation($name, $value)
+    {
+        $relation = $this->owner->getRelation($name);
+        if (!($value instanceof $relation->modelClass)) {
+            $value = $this->processModelAsArray($value, $relation);
+        }
+        $this->owner->populateRelation($name, $value);
+    }
+
+    /**
+     * Set the named multiple relation with the given value
+     * @param $name
+     * @param $value
+     */
+    protected function setMultipleRelation($name, $value)
+    {
+        $relation = $this->owner->getRelation($name);
+        $newRelations = [];
+        if (!is_array($value)) {
+            if (!empty($value)) {
+                $value = [$value];
+            } else {
+                $value = [];
+            }
+        }
+        foreach ($value as $entry) {
+            if ($entry instanceof $relation->modelClass) {
+                $newRelations[] = $entry;
+            } else {
+                // TODO handle this with one DB request to retrieve all models
+                $newRelations[] = $this->processModelAsArray($entry, $relation);
+            }
+        }
+        $this->owner->populateRelation($name, $newRelations);
+    }
+
+    /**
+     * Get a BaseActiveRecord model using the given $data parameter.
      * $data could either be a model ID or an associative array representing model attributes => values
      * @param mixed $data
      * @param \yii\db\ActiveQuery $relation
      * @return BaseActiveRecord
      */
-    public function _processModelAsArray($data, $relation)
+    protected function processModelAsArray($data, $relation)
     {
         /** @var BaseActiveRecord $modelClass */
         $modelClass = $relation->modelClass;
@@ -168,7 +185,7 @@ class SaveRelationsBehavior extends Behavior
         if ($this->_relationsSaveStarted == false && !empty($this->_oldRelationValue)) {
             /* @var $model BaseActiveRecord */
             $model = $this->owner;
-            if ($this->_saveRelatedRecords($model, $event)) {
+            if ($this->saveRelatedRecords($model, $event)) {
                 // If relation is has_one, try to set related model attributes
                 foreach ($this->relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
@@ -196,7 +213,7 @@ class SaveRelationsBehavior extends Behavior
      * @param ModelEvent $event
      * @return bool
      */
-    public function _saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
+    protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
         if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT)) || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE)) || $model->isTransactional($model::OP_ALL)) {
             $this->_transaction = $model->getDb()->beginTransaction();
@@ -209,13 +226,13 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false) {
                             // Save Has one relation new record
                             $pettyRelationName = Inflector::camel2words($relationName, true);
-                            $this->_saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
+                            $this->saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
                         } else {
                             // Save Has many relations new records
                             /** @var BaseActiveRecord $relationModel */
                             foreach ($model->{$relationName} as $i => $relationModel) {
                                 $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                                $this->_validateRelationModel($pettyRelationName, $relationName, $relationModel, $event);
+                                $this->validateRelationModel($pettyRelationName, $relationName, $relationModel, $event);
                             }
                         }
                     }
@@ -241,9 +258,9 @@ class SaveRelationsBehavior extends Behavior
      * @param $pettyRelationName
      * @param $relationName
      */
-    public function _saveModelRecord(BaseActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
+    protected function saveModelRecord(BaseActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
     {
-        $this->_validateRelationModel($pettyRelationName, $relationName, $model, $event);
+        $this->validateRelationModel($pettyRelationName, $relationName, $model, $event);
         if ($event->isValid && (count($model->dirtyAttributes) || $model->isNewRecord)) {
             Yii::trace("Saving {$pettyRelationName} relation model", __METHOD__);
             $model->save(false);
@@ -257,7 +274,7 @@ class SaveRelationsBehavior extends Behavior
      * @param BaseActiveRecord $relationModel
      * @param ModelEvent $event
      */
-    private function _validateRelationModel($pettyRelationName, $relationName, BaseActiveRecord $relationModel, ModelEvent $event)
+    protected function validateRelationModel($pettyRelationName, $relationName, BaseActiveRecord $relationModel, ModelEvent $event)
     {
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
@@ -384,6 +401,4 @@ class SaveRelationsBehavior extends Behavior
             }
         }
     }
-
-
 }

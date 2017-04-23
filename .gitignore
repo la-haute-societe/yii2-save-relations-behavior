@@ -3,3 +3,4 @@
 .idea/
 /vendor/
 /tests/report/
+/phpunit.phar
