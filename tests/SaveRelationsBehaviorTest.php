@@ -395,7 +395,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             $secondTag
         ];
         $this->assertTrue($project->save(), 'Project could not be saved');
-        $this->assertCount(2, $project->tags, 'Project should have 4 tags after assignment');
+        $this->assertCount(2, $project->tags, 'Project should have 2 tags after assignment');
 
         $firstTagJunctionTableColumns = (new \yii\db\Query())->from('project_tags')->where(['tag_id' => $firstTag->id])->one();
         $secondTagJunctionTableColumns = (new \yii\db\Query())->from('project_tags')->where(['tag_id' => $secondTag->id])->one();
