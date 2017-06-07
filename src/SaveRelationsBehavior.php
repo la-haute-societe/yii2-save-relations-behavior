@@ -22,6 +22,7 @@ class SaveRelationsBehavior extends Behavior
 {
 
     public $relations = [];
+    public $junctionTableColumns = [];
     private $_oldRelationValue = [];
     private $_relationsSaveStarted = false;
     private $_transaction;
@@ -320,7 +321,8 @@ class SaveRelationsBehavior extends Behavior
                             return implode("-", $model->getPrimaryKey(true));
                         });
                         foreach ($addedPks as $key) {
-                            $model->link($relationName, $actualModels[$key]);
+                            $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
+                            $model->link($relationName, $actualModels[$key], $junctionTableColumns);
                         }
                     } else { // Has one relation
                         if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
@@ -342,6 +344,33 @@ class SaveRelationsBehavior extends Behavior
                 $this->_transaction->commit();
             }
         }
+    }
+
+    /**
+     * Return array of columns to save to the junction table for a related model having a many-to-many relation.
+     * @param string $relationName
+     * @param BaseActiveRecord $model
+     * @return array
+     */
+    private function _getJunctionTableColumns($relationName, $model)
+    {
+        $junctionTableColumns = [];
+
+        if (array_key_exists($relationName, $this->junctionTableColumns)) {
+            if (is_callable($this->junctionTableColumns[$relationName])) {
+                $junctionTableColumns = $this->junctionTableColumns[$relationName]($model);
+            } elseif (is_array($this->junctionTableColumns[$relationName])) {
+                $junctionTableColumns = $this->junctionTableColumns[$relationName];
+            }
+
+            if (!is_array($junctionTableColumns)) {
+                throw new RuntimeException(
+                    'Junction table columns definiton must return an array, got '.gettype($junctionTableColumns)
+                );
+            }
+        }
+
+        return $junctionTableColumns;
     }
 
     /**

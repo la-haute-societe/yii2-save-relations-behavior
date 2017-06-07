@@ -50,7 +50,14 @@ class Project extends \yii\db\ActiveRecord
             ...
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['users', 'company']
+                'relations' => ['users', 'company', 'tags'],
+                'junctionTableColumns' => [
+                    'tags' => function ($model) {
+                        return [
+                            'order' => $model->order
+                        ];
+                    }
+                ]
             ],
         ];
     }
@@ -87,6 +94,14 @@ class Project extends \yii\db\ActiveRecord
     public function getUsers()
     {
         return $this->hasMany(User::className(), ['id' => 'user_id'])->via('ProjectUsers');
+    }
+    
+    /**
+     * @return ActiveQuery
+     */
+    public function getTags()
+    {
+        return $this->hasMany(Tag::className(), ['id' => 'tag_id'])->viaTable('ProjectTags', ['project_id' => 'id']);
     }
 
 }
@@ -128,6 +143,12 @@ Attributes of the related model will be massively assigned using the `load() met
 > - Only newly created or changed related models will be saved.
 
 > See the PHPUnit tests for more examples.
+
+Populate additional junction table columns in a many-to-many relation
+---------------------------------------------------------------------
+In a many-to-many relation involving a junction table additional column values can be saved to the junction table for each model.
+See the configuration section for examples.
+
 
 Validation
 ----------
