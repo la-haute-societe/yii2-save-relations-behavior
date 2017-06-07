@@ -299,7 +299,8 @@ class SaveRelationsBehavior extends Behavior
                                 if ($relation->via !== null) {
                                     $relationModel->save(false);
                                 }
-                                $model->link($relationName, $relationModel);
+                                $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
+                                $model->link($relationName, $relationModel, $junctionTableColumns);
                             } else {
                                 $existingRecords[] = $relationModel;
                             }
