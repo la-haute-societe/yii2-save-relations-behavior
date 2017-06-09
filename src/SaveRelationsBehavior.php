@@ -308,23 +308,28 @@ class SaveRelationsBehavior extends Behavior
                                 $relationModel->save(false);
                             }
                         }
+                        $junctionTablePropertiesUsed = array_key_exists($relationName, $this->junctionTableColumns);
                         // Process existing added and deleted relations
                         list($addedPks, $deletedPks) = $this->_computePkDiff(
                             $this->_oldRelationValue[$relationName],
                             $existingRecords,
-                            array_key_exists($relationName, $this->junctionTableColumns)
+                            $junctionTablePropertiesUsed
                         );
                         // Deleted relations
                         $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
                             return implode("-", $model->getPrimaryKey(true));
                         });
+                        $initialRelations = $model->{$relationName};
                         foreach ($deletedPks as $key) {
                             $model->unlink($relationName, $initialModels[$key], true);
                         }
                         // Added relations
-                        $actualModels = ArrayHelper::index($model->{$relationName}, function (BaseActiveRecord $model) {
-                            return implode("-", $model->getPrimaryKey(true));
-                        });
+                        $actualModels = ArrayHelper::index(
+                            $junctionTablePropertiesUsed ? $initialRelations : $model->{$relationName},
+                            function (BaseActiveRecord $model) {
+                                return implode("-", $model->getPrimaryKey(true));
+                            }
+                        );
                         foreach ($addedPks as $key) {
                             $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
                             $model->link($relationName, $actualModels[$key], $junctionTableColumns);
