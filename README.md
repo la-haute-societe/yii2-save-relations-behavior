@@ -147,6 +147,8 @@ Attributes of the related model will be massively assigned using the `load() met
 Populate additional junction table columns in a many-to-many relation
 ---------------------------------------------------------------------
 In a many-to-many relation involving a junction table additional column values can be saved to the junction table for each model.
+Note that if junction table properties are configured for a relation the rows associated with the related models in the junction table will be deleted and inserted again on each saving
+to ensure that changes to the junction table properties are saved too.
 See the configuration section for examples.
 
 

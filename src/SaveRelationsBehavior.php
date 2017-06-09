@@ -309,7 +309,11 @@ class SaveRelationsBehavior extends Behavior
                             }
                         }
                         // Process existing added and deleted relations
-                        list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName], $existingRecords);
+                        list($addedPks, $deletedPks) = $this->_computePkDiff(
+                            $this->_oldRelationValue[$relationName],
+                            $existingRecords,
+                            array_key_exists($relationName, $this->junctionTableColumns)
+                        );
                         // Deleted relations
                         $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
                             return implode("-", $model->getPrimaryKey(true));
@@ -376,11 +380,14 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Compute the difference between two set of records using primary keys "tokens"
+     * If third parameter is set to true all initial related records will be marked for removal even if their
+     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
      * @param BaseActiveRecord[] $initialRelations
      * @param BaseActiveRecord[] $updatedRelations
+     * @param bool $resaveAll
      * @return array
      */
-    private function _computePkDiff($initialRelations, $updatedRelations)
+    private function _computePkDiff($initialRelations, $updatedRelations, $resaveAll = false)
     {
         // Compute differences between initial relations and the current ones
         $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
@@ -389,9 +396,14 @@ class SaveRelationsBehavior extends Behavior
         $newPks = ArrayHelper::getColumn($updatedRelations, function (BaseActiveRecord $model) {
             return implode("-", $model->getPrimaryKey(true));
         });
-        $identicalPks = array_intersect($oldPks, $newPks);
-        $addedPks = array_values(array_diff($newPks, $identicalPks));
-        $deletedPks = array_values(array_diff($oldPks, $identicalPks));
+        if ($resaveAll) {
+            $addedPks = $newPks;
+            $deletedPks = $oldPks;
+        } else {
+            $identicalPks = array_intersect($oldPks, $newPks);
+            $addedPks = array_values(array_diff($newPks, $identicalPks));
+            $deletedPks = array_values(array_diff($oldPks, $identicalPks));
+        }
         return [$addedPks, $deletedPks];
     }
 
