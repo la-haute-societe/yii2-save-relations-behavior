@@ -22,6 +22,7 @@ class SaveRelationsBehavior extends Behavior
 {
 
     public $relations = [];
+    public $junctionTableColumns = [];
     private $_oldRelationValue = [];
     private $_relationsSaveStarted = false;
     private $_transaction;
@@ -298,7 +299,8 @@ class SaveRelationsBehavior extends Behavior
                                 if ($relation->via !== null) {
                                     $relationModel->save(false);
                                 }
-                                $model->link($relationName, $relationModel);
+                                $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
+                                $model->link($relationName, $relationModel, $junctionTableColumns);
                             } else {
                                 $existingRecords[] = $relationModel;
                             }
@@ -306,21 +308,31 @@ class SaveRelationsBehavior extends Behavior
                                 $relationModel->save(false);
                             }
                         }
+                        $junctionTablePropertiesUsed = array_key_exists($relationName, $this->junctionTableColumns);
                         // Process existing added and deleted relations
-                        list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName], $existingRecords);
+                        list($addedPks, $deletedPks) = $this->_computePkDiff(
+                            $this->_oldRelationValue[$relationName],
+                            $existingRecords,
+                            $junctionTablePropertiesUsed
+                        );
                         // Deleted relations
                         $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
                             return implode("-", $model->getPrimaryKey(true));
                         });
+                        $initialRelations = $model->{$relationName};
                         foreach ($deletedPks as $key) {
                             $model->unlink($relationName, $initialModels[$key], true);
                         }
                         // Added relations
-                        $actualModels = ArrayHelper::index($model->{$relationName}, function (BaseActiveRecord $model) {
-                            return implode("-", $model->getPrimaryKey(true));
-                        });
+                        $actualModels = ArrayHelper::index(
+                            $junctionTablePropertiesUsed ? $initialRelations : $model->{$relationName},
+                            function (BaseActiveRecord $model) {
+                                return implode("-", $model->getPrimaryKey(true));
+                            }
+                        );
                         foreach ($addedPks as $key) {
-                            $model->link($relationName, $actualModels[$key]);
+                            $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
+                            $model->link($relationName, $actualModels[$key], $junctionTableColumns);
                         }
                     } else { // Has one relation
                         if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
@@ -345,12 +357,42 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Compute the difference between two set of records using primary keys "tokens"
-     * @param BaseActiveRecord[] $initialRelations
-     * @param BaseActiveRecord[] $updatedRelations
+     * Return array of columns to save to the junction table for a related model having a many-to-many relation.
+     * @param string $relationName
+     * @param BaseActiveRecord $model
      * @return array
      */
-    private function _computePkDiff($initialRelations, $updatedRelations)
+    private function _getJunctionTableColumns($relationName, $model)
+    {
+        $junctionTableColumns = [];
+
+        if (array_key_exists($relationName, $this->junctionTableColumns)) {
+            if (is_callable($this->junctionTableColumns[$relationName])) {
+                $junctionTableColumns = $this->junctionTableColumns[$relationName]($model);
+            } elseif (is_array($this->junctionTableColumns[$relationName])) {
+                $junctionTableColumns = $this->junctionTableColumns[$relationName];
+            }
+
+            if (!is_array($junctionTableColumns)) {
+                throw new RuntimeException(
+                    'Junction table columns definiton must return an array, got '.gettype($junctionTableColumns)
+                );
+            }
+        }
+
+        return $junctionTableColumns;
+    }
+
+    /**
+     * Compute the difference between two set of records using primary keys "tokens"
+     * If third parameter is set to true all initial related records will be marked for removal even if their
+     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
+     * @param BaseActiveRecord[] $initialRelations
+     * @param BaseActiveRecord[] $updatedRelations
+     * @param bool $resaveAll
+     * @return array
+     */
+    private function _computePkDiff($initialRelations, $updatedRelations, $resaveAll = false)
     {
         // Compute differences between initial relations and the current ones
         $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
@@ -359,9 +401,14 @@ class SaveRelationsBehavior extends Behavior
         $newPks = ArrayHelper::getColumn($updatedRelations, function (BaseActiveRecord $model) {
             return implode("-", $model->getPrimaryKey(true));
         });
-        $identicalPks = array_intersect($oldPks, $newPks);
-        $addedPks = array_values(array_diff($newPks, $identicalPks));
-        $deletedPks = array_values(array_diff($oldPks, $identicalPks));
+        if ($resaveAll) {
+            $addedPks = $newPks;
+            $deletedPks = $oldPks;
+        } else {
+            $identicalPks = array_intersect($oldPks, $newPks);
+            $addedPks = array_values(array_diff($newPks, $identicalPks));
+            $deletedPks = array_values(array_diff($oldPks, $identicalPks));
+        }
         return [$addedPks, $deletedPks];
     }
 

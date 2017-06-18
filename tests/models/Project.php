@@ -22,7 +22,15 @@ class Project extends \yii\db\ActiveRecord
         return [
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['company', 'users', 'links']
+                'relations' => ['company', 'users', 'links', 'tags'],
+                'junctionTableColumns' => [
+                    'tags' => function ($model) {
+                        /** @var $model Tag */
+                        return [
+                            'order' => $model->getOrder()
+                        ];
+                    }
+                ]
             ],
         ];
     }
@@ -86,6 +94,14 @@ class Project extends \yii\db\ActiveRecord
     public function getLinks()
     {
         return $this->hasMany(Link::className(), ['language' => 'language', 'name' => 'name'])->via('projectLinks');
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getTags()
+    {
+        return $this->hasMany(Tag::className(), ['id' => 'tag_id'])->viaTable('project_tags', ['project_id' => 'id']);
     }
 
 }

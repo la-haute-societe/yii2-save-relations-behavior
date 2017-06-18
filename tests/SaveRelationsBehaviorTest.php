@@ -13,6 +13,7 @@ use tests\models\Project;
 use tests\models\ProjectLink;
 use tests\models\ProjectNoTransactions;
 use tests\models\User;
+use tests\models\Tag;
 use Yii;
 use yii\base\Model;
 use yii\db\Migration;
@@ -36,6 +37,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('company')->execute();
         $db->createCommand()->dropTable('link_type')->execute();
         $db->createCommand()->dropTable('link')->execute();
+        $db->createCommand()->dropTable('project_tags')->execute();
+        $db->createCommand()->dropTable('tags')->execute();
         $db->createCommand()->dropTable('project_link')->execute();
         $db->createCommand()->dropTable('dummy')->execute();
         parent::tearDown();
@@ -78,6 +81,17 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             'link'         => $migration->string()->notNull(),
             'link_type_id' => $migration->integer(),
             'PRIMARY KEY(language, name)'
+        ])->execute();
+
+        $db->createCommand()->createTable('tags', [
+            'id'   => $migration->primaryKey(),
+            'name' => $migration->string()->notNull()->unique()
+        ])->execute();
+
+        $db->createCommand()->createTable('project_tags', [
+            'project_id'   => $migration->integer()->notNull(),
+            'tag_id' => $migration->integer()->notNull(),
+            'order' => $migration->integer()->notNull()
         ])->execute();
 
         $db->createCommand()->createTable('link_type', [
@@ -365,6 +379,28 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             $project->links[1]->link,
             'Second link "Link" attribute should be "http://www.otherlink.com/"'
         );
+    }
+
+    public function testSaveNewManyRelationJunctionTableColumnsShouldSucceed()
+    {
+        $project = Project::findOne(1);
+        $firstTag = new Tag();
+        $firstTag->name = 'Tag One';
+        $firstTag->setOrder(1);
+        $secondTag = new Tag();
+        $secondTag->name = 'Tag Two';
+        $secondTag->setOrder(3);
+        $project->tags = [
+            $firstTag,
+            $secondTag
+        ];
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertCount(2, $project->tags, 'Project should have 2 tags after assignment');
+
+        $firstTagJunctionTableColumns = (new \yii\db\Query())->from('project_tags')->where(['tag_id' => $firstTag->id])->one();
+        $secondTagJunctionTableColumns = (new \yii\db\Query())->from('project_tags')->where(['tag_id' => $secondTag->id])->one();
+        $this->assertEquals($firstTag->getOrder(), $firstTagJunctionTableColumns['order']);
+        $this->assertEquals($secondTag->getOrder(), $secondTagJunctionTableColumns['order']);
     }
 
     public function testSaveMixedRelationsShouldSucceed()
