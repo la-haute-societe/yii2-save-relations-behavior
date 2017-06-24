@@ -7,6 +7,7 @@ use Yii;
 use yii\base\Behavior;
 use yii\base\Exception;
 use yii\base\ModelEvent;
+use yii\base\UnknownPropertyException;
 use yii\db\ActiveQueryInterface;
 use yii\db\BaseActiveRecord;
 use yii\db\Transaction;
@@ -22,9 +23,35 @@ class SaveRelationsBehavior extends Behavior
 {
 
     public $relations = [];
+    private $_relations = [];
     private $_oldRelationValue = [];
     private $_relationsSaveStarted = false;
     private $_transaction;
+
+    private $_relationsScenario = [];
+    private $_relationsCascadeDelete = [];
+
+    public function init()
+    {
+        parent::init();
+        $allowedProperties = ['scenario', 'cascadeDelete'];
+        foreach ($this->relations as $key => $value) {
+            if (is_int($key)) {
+                $this->_relations[] = $value;
+            } else {
+                $this->_relations[] = $key;
+                if (is_array($value)) {
+                    foreach ($value as $propertyKey => $propertyValue) {
+                        if (in_array($propertyKey, $allowedProperties)) {
+                            $this->{'_relations' . ucfirst($propertyKey)}[$key] = $propertyValue;
+                        } else {
+                            throw new UnknownPropertyException('The relation property named ' . $propertyKey . ' is not supported');
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     public function events()
     {
@@ -58,7 +85,7 @@ class SaveRelationsBehavior extends Behavior
     public function canSetProperty($name, $checkVars = true)
     {
         $getter = 'get' . $name;
-        if (in_array($name, $this->relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQueryInterface) {
+        if (in_array($name, $this->_relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQueryInterface) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
@@ -72,7 +99,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function __set($name, $value)
     {
-        if (in_array($name, $this->relations)) {
+        if (in_array($name, $this->_relations)) {
             Yii::trace("Setting {$name} relation value", __METHOD__);
             if (!isset($this->_oldRelationValue[$name])) {
                 $this->_oldRelationValue[$name] = $this->owner->{$name};
@@ -187,7 +214,7 @@ class SaveRelationsBehavior extends Behavior
             $model = $this->owner;
             if ($this->saveRelatedRecords($model, $event)) {
                 // If relation is has_one, try to set related model attributes
-                foreach ($this->relations as $relationName) {
+                foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
@@ -219,7 +246,7 @@ class SaveRelationsBehavior extends Behavior
             $this->_transaction = $model->getDb()->beginTransaction();
         }
         try {
-            foreach ($this->relations as $relationName) {
+            foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                     $relation = $model->getRelation($relationName);
                     if (!empty($model->{$relationName})) {
@@ -302,7 +329,7 @@ class SaveRelationsBehavior extends Behavior
             /** @var BaseActiveRecord $model */
             $model = $this->owner;
             $this->_relationsSaveStarted = true;
-            foreach ($this->relations as $relationName) {
+            foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                     Yii::trace("Linking {$relationName} relation", __METHOD__);
                     $relation = $model->getRelation($relationName);
@@ -390,7 +417,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
-        foreach ($this->relations as $relationName) {
+        foreach ($this->_relations as $relationName) {
             $relation = $model->getRelation($relationName);
             $modelClass = $relation->modelClass;
             /** @var BaseActiveRecord $relationalModel */
