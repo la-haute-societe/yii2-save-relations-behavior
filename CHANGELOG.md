@@ -1,9 +1,11 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.2.1]
+- Unreleased version
+
 ## [1.2.0]
 ### Changed
 - Use of `ActiveQueryInterface` and `BaseActiveRecord` to ensure broader DB driver compatibility (Thx @bookin)
-
 
 ## [1.1.3] 2017-03-04
 ### Fixed

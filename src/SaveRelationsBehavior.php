@@ -269,8 +269,10 @@ class SaveRelationsBehavior extends Behavior
                 throw new Exception("One of the related model could not be validated");
             }
         } catch (Exception $e) {
+            Yii::warning(get_class($e) . " was thrown during the saving of related records : " . $e->getMessage(), __METHOD__);
             if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
                 $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+                Yii::info("Rolling back", __METHOD__);
             }
             $event->isValid = false; // Stop saving, something went wrong
             return false;
@@ -306,7 +308,10 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
-            Yii::trace("Validating {$pettyRelationName} relation model", __METHOD__);
+//            if (key_exists($relationModel, $this->_relationsScenario)) {
+//                $relationModel->setScenario($this->_relationsScenario[$relationModel]);
+//            }
+            Yii::trace("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . " scenario", __METHOD__);
             if (!$relationModel->validate()) {
                 foreach ($relationModel->errors as $attributeErrors) {
                     foreach ($attributeErrors as $error) {
