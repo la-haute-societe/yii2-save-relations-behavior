@@ -58,7 +58,7 @@ class SaveRelationsBehavior extends Behavior
     public function canSetProperty($name, $checkVars = true)
     {
         $getter = 'get' . $name;
-        if (in_array($name, $this->relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQueryInterface) {
+        if (in_array($name, $this->relations) && $this->owner->getRelation($name, false)) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
