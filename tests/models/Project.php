@@ -22,7 +22,7 @@ class Project extends \yii\db\ActiveRecord
         return [
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['company', 'users', 'links']
+                'relations' => ['company', 'users', 'links' => ['scenario' => Link::SCENARIO_FIRST]]
             ],
         ];
     }

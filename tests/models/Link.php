@@ -6,6 +6,10 @@ use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
 class Link extends \yii\db\ActiveRecord
 {
+
+    const SCENARIO_FIRST = 'first';
+    const SCENARIO_SECOND = 'second';
+
     /**
      * @inheritdoc
      */
