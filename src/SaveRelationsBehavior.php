@@ -84,7 +84,6 @@ class SaveRelationsBehavior extends Behavior
      */
     public function canSetProperty($name, $checkVars = true)
     {
-        $getter = 'get' . $name;
         if (in_array($name, $this->relations) && $this->owner->getRelation($name, false)) {
             return true;
         }
