@@ -167,21 +167,30 @@ class SaveRelationsBehavior extends Behavior
         // Get the related model foreign keys
         if (is_array($data)) {
             $fks = [];
-
-            // Get the right link definition
-            if ($relation->via instanceof BaseActiveRecord) {
-                $viaQuery = $relation->via;
-                $link = $viaQuery->link;
-            } elseif (is_array($relation->via)) {
-                list($viaName, $viaQuery) = $relation->via;
-                $link = $viaQuery->link;
-            } else {
-                $link = $relation->link;
-            }
-
-            foreach ($link as $relatedAttribute => $modelAttribute) {
+            
+            // search PK
+            foreach($modelClass::primaryKey() as $modelAttribute) {
                 if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
+                }
+            }
+
+            if (!$fks) {
+                // Get the right link definition
+                if ($relation->via instanceof BaseActiveRecord) {
+                    $viaQuery = $relation->via;
+                    $link = $viaQuery->link;
+                } elseif (is_array($relation->via)) {
+                    list($viaName, $viaQuery) = $relation->via;
+                    $link = $viaQuery->link;
+                } else {
+                    $link = $relation->link;
+                }
+
+                foreach ($link as $relatedAttribute => $modelAttribute) {
+                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                        $fks[$modelAttribute] = $data[$modelAttribute];
+                    }
                 }
             }
         } else {
