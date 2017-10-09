@@ -6,9 +6,7 @@ use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
 class Link extends \yii\db\ActiveRecord
 {
-
     const SCENARIO_FIRST = 'first';
-    const SCENARIO_SECOND = 'second';
 
     /**
      * @inheritdoc
@@ -39,6 +37,7 @@ class Link extends \yii\db\ActiveRecord
         return [
             [['language', 'name', 'link'], 'required'],
             [['name'], 'unique', 'targetAttribute' => ['language', 'name']],
+            [['link'], 'url', 'on' => [self::SCENARIO_FIRST]],
             [['link_type_id'], 'safe']
         ];
     }

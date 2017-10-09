@@ -15,10 +15,19 @@ new \yii\console\Application([
     'id'         => 'unit',
     'basePath'   => __DIR__,
     'vendorPath' => dirname(__DIR__) . '/vendor',
+//    'bootstrap'  => ['log'],
     'components' => [
         'db' => [
             'class' => 'yii\db\Connection',
             'dsn'   => 'sqlite::memory:',
         ],
-    ],
+//        'log' => [
+//            'targets' => [
+//                [
+//                    'class' => 'yii\log\FileTarget',
+//                    'categories' => ['yii\db\*', 'lhs\Yii2SaveRelationsBehavior\*']
+//                ],
+//            ]
+//        ],
+    ]
 ]);

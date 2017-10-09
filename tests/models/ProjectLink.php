@@ -4,6 +4,7 @@ namespace tests\models;
 
 class ProjectLink extends \yii\db\ActiveRecord
 {
+
     /**
      * @inheritdoc
      */
@@ -18,7 +19,8 @@ class ProjectLink extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['language', 'name', 'project_id'], 'required']
+            [['language', 'name', 'project_id'], 'required'],
+            [['language', 'name'], 'unique']
         ];
     }
 

@@ -13,6 +13,7 @@ use yii\db\BaseActiveRecord;
 use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
+use yii\helpers\VarDumper;
 
 /**
  * This Active Record Behavior allows to validate and save the Model relations when the save() method is invoked.
@@ -29,12 +30,13 @@ class SaveRelationsBehavior extends Behavior
     private $_transaction;
 
     private $_relationsScenario = [];
-    private $_relationsCascadeDelete = [];
+
+    //private $_relationsCascadeDelete = []; //TODO
 
     public function init()
     {
         parent::init();
-        $allowedProperties = ['scenario', 'cascadeDelete'];
+        $allowedProperties = ['scenario'];
         foreach ($this->relations as $key => $value) {
             if (is_int($key)) {
                 $this->_relations[] = $value;
@@ -102,7 +104,15 @@ class SaveRelationsBehavior extends Behavior
         if (in_array($name, $this->_relations)) {
             Yii::trace("Setting {$name} relation value", __METHOD__);
             if (!isset($this->_oldRelationValue[$name])) {
-                $this->_oldRelationValue[$name] = $this->owner->{$name};
+                if ($this->owner->isNewRecord) {
+                    if ($this->owner->getRelation($name)->multiple === true) {
+                        $this->_oldRelationValue[$name] = [];
+                    } else {
+                        $this->_oldRelationValue[$name] = null;
+                    }
+                } else {
+                    $this->_oldRelationValue[$name] = $this->owner->{$name};
+                }
             }
             if ($this->owner->getRelation($name)->multiple === true) {
                 $this->setMultipleRelation($name, $value);
@@ -167,15 +177,14 @@ class SaveRelationsBehavior extends Behavior
         // Get the related model foreign keys
         if (is_array($data)) {
             $fks = [];
-            
+
             // search PK
             foreach($modelClass::primaryKey() as $modelAttribute) {
                 if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
                 }
             }
-
-            if (!$fks) {
+            if (empty($fks)) {
                 // Get the right link definition
                 if ($relation->via instanceof BaseActiveRecord) {
                     $viaQuery = $relation->via;
@@ -186,7 +195,6 @@ class SaveRelationsBehavior extends Behavior
                 } else {
                     $link = $relation->link;
                 }
-
                 foreach ($link as $relatedAttribute => $modelAttribute) {
                     if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                         $fks[$modelAttribute] = $data[$modelAttribute];
@@ -317,9 +325,9 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
-//            if (key_exists($relationModel, $this->_relationsScenario)) {
-//                $relationModel->setScenario($this->_relationsScenario[$relationModel]);
-//            }
+            if (key_exists($relationName, $this->_relationsScenario)) {
+                $relationModel->setScenario($this->_relationsScenario[$relationName]);
+            }
             Yii::trace("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . " scenario", __METHOD__);
             if (!$relationModel->validate()) {
                 foreach ($relationModel->errors as $attributeErrors) {
@@ -343,56 +351,70 @@ class SaveRelationsBehavior extends Behavior
             /** @var BaseActiveRecord $model */
             $model = $this->owner;
             $this->_relationsSaveStarted = true;
-            foreach ($this->_relations as $relationName) {
-                if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
-                    Yii::trace("Linking {$relationName} relation", __METHOD__);
-                    $relation = $model->getRelation($relationName);
-                    if ($relation->multiple === true) { // Has many relation
-                        // Process new relations
-                        $existingRecords = [];
-                        /** @var BaseActiveRecord $relationModel */
-                        foreach ($model->{$relationName} as $relationModel) {
-                            if ($relationModel->isNewRecord) {
-                                if ($relation->via !== null) {
-                                    $relationModel->save(false);
+            try {
+                foreach ($this->_relations as $relationName) {
+                    if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                        Yii::trace("Linking {$relationName} relation", __METHOD__);
+                        $relation = $model->getRelation($relationName);
+                        if ($relation->multiple === true) { // Has many relation
+                            // Process new relations
+                            $existingRecords = [];
+
+                            /** @var BaseActiveRecord $relationModel */
+                            foreach ($model->{$relationName} as $relationModel) {
+                                if ($relationModel->isNewRecord) {
+                                    if ($relation->via !== null) {
+                                        if (!$relationModel->save()) {
+                                            throw new Exception('Related model ' . $relationName . ' could not be saved (' . VarDumper::dumpAsString($relationModel->getErrors()) . ')');
+                                        }
+                                    }
+                                    $model->link($relationName, $relationModel);
+                                } else {
+                                    $existingRecords[] = $relationModel;
                                 }
-                                $model->link($relationName, $relationModel);
-                            } else {
-                                $existingRecords[] = $relationModel;
-                            }
-                            if (count($relationModel->dirtyAttributes)) {
-                                $relationModel->save(false);
-                            }
-                        }
-                        // Process existing added and deleted relations
-                        list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName], $existingRecords);
-                        // Deleted relations
-                        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
-                            return implode("-", $model->getPrimaryKey(true));
-                        });
-                        foreach ($deletedPks as $key) {
-                            $model->unlink($relationName, $initialModels[$key], true);
-                        }
-                        // Added relations
-                        $actualModels = ArrayHelper::index($model->{$relationName}, function (BaseActiveRecord $model) {
-                            return implode("-", $model->getPrimaryKey(true));
-                        });
-                        foreach ($addedPks as $key) {
-                            $model->link($relationName, $actualModels[$key]);
-                        }
-                    } else { // Has one relation
-                        if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
-                            if ($model->{$relationName} instanceof BaseActiveRecord) {
-                                $model->link($relationName, $model->{$relationName});
-                            } else {
-                                if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
-                                    $model->unlink($relationName, $this->_oldRelationValue[$relationName]);
+                                if (count($relationModel->dirtyAttributes)) {
+                                    if (!$relationModel->save()) {
+                                        throw new Exception('Related model ' . $relationName . ' could not be saved (' . VarDumper::dumpAsString($relationModel->getErrors()) . ')');
+                                    }
                                 }
                             }
+                            // Process existing added and deleted relations
+                            list($addedPks, $deletedPks) = $this->_computePkDiff($this->_oldRelationValue[$relationName], $existingRecords);
+                            // Deleted relations
+                            $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
+                                return implode("-", $model->getPrimaryKey(true));
+                            });
+                            foreach ($deletedPks as $key) {
+                                $model->unlink($relationName, $initialModels[$key], true);
+                            }
+                            // Added relations
+                            $actualModels = ArrayHelper::index($model->{$relationName}, function (BaseActiveRecord $model) {
+                                return implode("-", $model->getPrimaryKey(true));
+                            });
+                            foreach ($addedPks as $key) {
+                                $model->link($relationName, $actualModels[$key]);
+                            }
+                        } else { // Has one relation
+                            if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
+                                if ($model->{$relationName} instanceof BaseActiveRecord) {
+                                    $model->link($relationName, $model->{$relationName});
+                                } else {
+                                    if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
+                                        $model->unlink($relationName, $this->_oldRelationValue[$relationName]);
+                                    }
+                                }
+                            }
                         }
+                        unset($this->_oldRelationValue[$relationName]);
                     }
-                    unset($this->_oldRelationValue[$relationName]);
                 }
+            } catch (Exception $e) {
+                Yii::warning(get_class($e) . " was thrown during the saving of related records : " . $e->getMessage(), __METHOD__);
+                if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
+                    $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+                    Yii::info("Rolling back", __METHOD__);
+                }
+                throw $e;
             }
             $model->refresh();
             $this->_relationsSaveStarted = false;

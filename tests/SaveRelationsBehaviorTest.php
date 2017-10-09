@@ -10,7 +10,6 @@ use tests\models\DummyModel;
 use tests\models\DummyModelParent;
 use tests\models\Link;
 use tests\models\Project;
-use tests\models\ProjectLink;
 use tests\models\ProjectNoTransactions;
 use tests\models\User;
 use Yii;
@@ -258,7 +257,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(2, $project->users, 'Project should have 2 users before save');
         $project->users = array_merge($project->users, [$user]); // Add new user to the existing list
         $this->assertCount(3, $project->users, 'Project should have 3 users after assignment');
-        $this->assertTrue($project->save(), 'Project could not be saved'.VarDumper::dumpAsString($project->errors));
+        $this->assertTrue($project->save(), 'Project could not be saved' . VarDumper::dumpAsString($project->errors));
         $this->assertCount(3, $project->users, 'Project should have 3 users after save');
     }
 
@@ -407,10 +406,10 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     {
         $project = Project::findOne(1);
         $data = [
-            'Company'     => [
+            'Company' => [
                 'name' => 'YiiSoft'
             ],
-            'ProjectLink' => [
+            'Link'    => [
                 [
                     'language' => 'en',
                     'name'     => 'yii',
@@ -427,6 +426,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
         $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
+        $this->assertEquals($project->links[0]->link, 'http://www.yiiframework.com');
+        $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.fr');
     }
 
     public function testAssignSingleObjectToHasManyRelationShouldSucceed()
@@ -458,6 +459,109 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $dummy_c = new DummyModel();
         $dummy_a->children = $dummy_c;
         $this->assertTrue($dummy_a->save(), 'Dummy A could not be saved');
+    }
+
+    /**
+     * @expectedException \Exception
+     */
+    public function testSavingRelationWithSameUniqueKeyShouldFail()
+    {
+        $project = new Project();
+        $project->name = "Yii Framework";
+        $data = [
+            'Company' => [
+                'name' => 'NewSoft'
+            ],
+            'Link'    => [
+                [
+                    'language' => 'en',
+                    'name'     => 'newsoft',
+                    'link'     => 'http://www.newsoft.com'
+                ],
+                [
+                    'language' => 'en',
+                    'name'     => 'newsoft',
+                    'link'     => 'http://www.newsoft.co.uk'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertFalse($project->save(), 'Project should not be saved');
+    }
+
+    public function testUpdatingAnExistingRelationShouldSucceed()
+    {
+        $project = new Project();
+        $project->name = "Yii Framework";
+        $data = [
+            'Company' => [
+                'name' => 'YiiSoft'
+            ],
+            'Link'    => [
+                [
+                    'language' => 'en',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.ru'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
+        $this->assertCount(1, $project->projectLinks, "Project should have 1 link");
+        $this->assertEquals($project->links[0]->link, 'http://www.yiiframework.ru');
+        $data = [
+            'Link' => [
+                [
+                    'language' => 'en',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.com'
+                ],
+                [
+                    'language' => 'fr',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.fr'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertEquals($project->links[0]->link, 'http://www.yiiframework.com');
+        $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.fr');
+    }
+
+    public function testPerScenarioAttributeValidationShouldSucceed()
+    {
+        $project = new Project();
+        $project->name = "Yii Framework";
+        $data = [
+            'Company' => [
+                'name' => 'YiiSoft'
+            ],
+            'Link'    => [
+                [
+                    'language' => 'en',
+                    'name'     => 'yii',
+                    'link'     => 'Invalid value',
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertFalse($project->save(), 'Project could be saved');
+        $data = [
+            'Company' => [
+                'name' => 'YiiSoft'
+            ],
+            'Link'    => [
+                [
+                    'language' => 'en',
+                    'name'     => 'yii',
+                    'link'     => 'http://www.yiiframework.com',
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
     }
 
 }
