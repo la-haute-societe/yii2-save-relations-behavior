@@ -10,10 +10,10 @@ use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
 use yii\db\ActiveQueryInterface;
 use yii\db\BaseActiveRecord;
+use Yii\db\Exception as DbException;
 use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
-use yii\helpers\VarDumper;
 
 /**
  * This Active Record Behavior allows to validate and save the Model relations when the save() method is invoked.
@@ -179,7 +179,7 @@ class SaveRelationsBehavior extends Behavior
             $fks = [];
 
             // search PK
-            foreach($modelClass::primaryKey() as $modelAttribute) {
+            foreach ($modelClass::primaryKey() as $modelAttribute) {
                 if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
                 }
@@ -287,10 +287,7 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             Yii::warning(get_class($e) . " was thrown during the saving of related records : " . $e->getMessage(), __METHOD__);
-            if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-                $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-                Yii::info("Rolling back", __METHOD__);
-            }
+            $this->_rollback();
             $event->isValid = false; // Stop saving, something went wrong
             return false;
         }
@@ -330,12 +327,7 @@ class SaveRelationsBehavior extends Behavior
             }
             Yii::trace("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . " scenario", __METHOD__);
             if (!$relationModel->validate()) {
-                foreach ($relationModel->errors as $attributeErrors) {
-                    foreach ($attributeErrors as $error) {
-                        $model->addError($relationName, "{$pettyRelationName}: {$error}");
-                    }
-                    $event->isValid = false;
-                }
+                $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
             }
         }
     }
@@ -352,6 +344,8 @@ class SaveRelationsBehavior extends Behavior
             $model = $this->owner;
             $this->_relationsSaveStarted = true;
             try {
+
+
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         Yii::trace("Linking {$relationName} relation", __METHOD__);
@@ -361,11 +355,15 @@ class SaveRelationsBehavior extends Behavior
                             $existingRecords = [];
 
                             /** @var BaseActiveRecord $relationModel */
-                            foreach ($model->{$relationName} as $relationModel) {
+                            foreach ($model->{$relationName} as $i => $relationModel) {
                                 if ($relationModel->isNewRecord) {
                                     if ($relation->via !== null) {
-                                        if (!$relationModel->save()) {
-                                            throw new Exception('Related model ' . $relationName . ' could not be saved (' . VarDumper::dumpAsString($relationModel->getErrors()) . ')');
+                                        if ($relationModel->validate()) {
+                                            $relationModel->save();
+                                        } else {
+                                            $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
+                                            $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
+                                            throw new DbException("Related record {$pettyRelationName} could not be saved.");
                                         }
                                     }
                                     $model->link($relationName, $relationModel);
@@ -373,8 +371,12 @@ class SaveRelationsBehavior extends Behavior
                                     $existingRecords[] = $relationModel;
                                 }
                                 if (count($relationModel->dirtyAttributes)) {
-                                    if (!$relationModel->save()) {
-                                        throw new Exception('Related model ' . $relationName . ' could not be saved (' . VarDumper::dumpAsString($relationModel->getErrors()) . ')');
+                                    if ($relationModel->validate()) {
+                                        $relationModel->save();
+                                    } else {
+                                        $pettyRelationName = Inflector::camel2words($relationName, true);
+                                        $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
+                                        throw new DbException("Related record {$pettyRelationName} could not be saved.");
                                     }
                                 }
                             }
@@ -409,17 +411,37 @@ class SaveRelationsBehavior extends Behavior
                     }
                 }
             } catch (Exception $e) {
-                Yii::warning(get_class($e) . " was thrown during the saving of related records : " . $e->getMessage(), __METHOD__);
-                if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-                    $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-                    Yii::info("Rolling back", __METHOD__);
-                }
+                $this->_rollback();
+                /***
+                 * Sadly mandatory because the error occurred during afterSave event
+                 * and we don't want the user/developper not to be aware of the issue.
+                 ***/
                 throw $e;
             }
             $model->refresh();
             $this->_relationsSaveStarted = false;
             if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
                 $this->_transaction->commit();
+            }
+        }
+    }
+
+    /**
+     * Populates relations with input data
+     * @param array $data
+     */
+    public function loadRelations($data)
+    {
+        /** @var BaseActiveRecord $model */
+        $model = $this->owner;
+        foreach ($this->_relations as $relationName) {
+            $relation = $model->getRelation($relationName);
+            $modelClass = $relation->modelClass;
+            /** @var BaseActiveRecord $relationalModel */
+            $relationalModel = new $modelClass;
+            $formName = $relationalModel->formName();
+            if (array_key_exists($formName, $data)) {
+                $model->{$relationName} = $data[$formName];
             }
         }
     }
@@ -446,22 +468,27 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Populates relations with input data
-     * @param array $data
+     * Attach errors to owner relational attributes
+     * @param $relationModel
+     * @param $owner
+     * @param $relationName
+     * @param $pettyRelationName
+     * @return array
      */
-    public function loadRelations($data)
+    private function _addError($relationModel, $owner, $relationName, $pettyRelationName)
     {
-        /** @var BaseActiveRecord $model */
-        $model = $this->owner;
-        foreach ($this->_relations as $relationName) {
-            $relation = $model->getRelation($relationName);
-            $modelClass = $relation->modelClass;
-            /** @var BaseActiveRecord $relationalModel */
-            $relationalModel = new $modelClass;
-            $formName = $relationalModel->formName();
-            if (array_key_exists($formName, $data)) {
-                $model->{$relationName} = $data[$formName];
+        foreach ($relationModel->errors as $attributeErrors) {
+            foreach ($attributeErrors as $error) {
+                $owner->addError($relationName, "{$pettyRelationName}: {$error}");
             }
+        }
+    }
+
+    private function _rollback()
+    {
+        if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
+            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+            Yii::info("Rolling back", __METHOD__);
         }
     }
 }

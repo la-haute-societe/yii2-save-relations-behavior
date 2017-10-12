@@ -11,7 +11,7 @@
 - False positive testLoadRelationsShouldSucceed test case
 
 ### Changed
-- afterSave throw exception if a related record fail to be saved
+- afterSave throw exception if a related record fail to be saved. In that case, a database rollback is triggered (when relevant) and an error is attached to the according relation attribute 
 - related record are now correctly updated based on there primary key (Thanks to @DD174)
 
 ## [1.2.0]

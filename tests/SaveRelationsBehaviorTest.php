@@ -462,7 +462,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \Exception
+     * @expectedException yii\db\Exception
      */
     public function testSavingRelationWithSameUniqueKeyShouldFail()
     {
@@ -486,7 +486,25 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             ]
         ];
         $project->loadRelations($data);
-        $this->assertFalse($project->save(), 'Project should not be saved');
+        /***
+         * This test throw an yii\base\Exception due to key conflict for related records.
+         * That kind of issue is hard to address because no validation process could prevent that.
+         * The exception is raised during the afterSave event of the owner model.
+         * In that case, the behavior takes care to rollback any database modifications
+         * and add an error to the related relational record.
+         * Anyway, the exception should be catched to address the correct workflow.
+         ***/
+        try {
+            $project->save();
+        } catch (\Exception $e) {
+            $this->assertArrayHasKey(
+                'links',
+                $project->getErrors(),
+                'Links #1: The combination \"en\"-\"newsoft\" of Language and Name has already been taken.'
+            );
+            throw $e;
+        }
+
     }
 
     public function testUpdatingAnExistingRelationShouldSucceed()
@@ -549,9 +567,6 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project->loadRelations($data);
         $this->assertFalse($project->save(), 'Project could be saved');
         $data = [
-            'Company' => [
-                'name' => 'YiiSoft'
-            ],
             'Link'    => [
                 [
                     'language' => 'en',
