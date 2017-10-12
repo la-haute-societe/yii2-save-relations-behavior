@@ -286,7 +286,7 @@ class SaveRelationsBehavior extends Behavior
                 throw new Exception("One of the related model could not be validated");
             }
         } catch (Exception $e) {
-            Yii::warning(get_class($e) . " was thrown during the saving of related records : " . $e->getMessage(), __METHOD__);
+            Yii::warning(get_class($e) . " was thrown while saving related records during beforeValidate event: " . $e->getMessage(), __METHOD__);
             $this->_rollback();
             $event->isValid = false; // Stop saving, something went wrong
             return false;
@@ -411,6 +411,7 @@ class SaveRelationsBehavior extends Behavior
                     }
                 }
             } catch (Exception $e) {
+                Yii::warning(get_class($e) . " was thrown while saving related records during afterSave event: " . $e->getMessage(), __METHOD__);
                 $this->_rollback();
                 /***
                  * Sadly mandatory because the error occurred during afterSave event

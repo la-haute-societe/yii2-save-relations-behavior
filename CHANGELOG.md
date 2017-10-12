@@ -1,14 +1,13 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
 ## [1.3.0]
-- Unreleased version
-
 ### Added
-- Ability to define validation scenario for related records
+- Enh #3: Ability to define validation scenario for related records
+- Enh #7: Exception logging during `beforeValidate` and `afterSave` events.
 - More test cases
 
 ### Fixed
-- False positive testLoadRelationsShouldSucceed test case
+- False positive `testLoadRelationsShouldSucceed` test case
 
 ### Changed
 - afterSave throw exception if a related record fail to be saved. In that case, a database rollback is triggered (when relevant) and an error is attached to the according relation attribute 
