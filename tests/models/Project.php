@@ -69,7 +69,9 @@ class Project extends \yii\db\ActiveRecord
      */
     public function getUsers()
     {
-        return $this->hasMany(User::className(), ['id' => 'user_id'])->via('projectUsers');
+        return $this->hasMany(User::className(), ['id' => 'user_id'])->via('projectUsers', function ($query) {
+            return $query;
+        });
     }
 
     /**

@@ -135,9 +135,28 @@ Every declared related models will be validated prior to be saved. If any valida
 
 For `hasMany()` relations, the index of the related model will be used to identify the associated error message.
 
-
-> **Tips :**
+It is possible to specify the validation scenario for each relation by declaring an associative array in which the `scenario` key must contain the needed scenario value.
+For instance, in the following configuration, the `links ` related records will be validated using the `Link::SOME_SCENARIO` scenario:
+```php
+...
+    public function behaviors()
+    {
+        return [
+            'saveRelations' => [
+                'class'     => SaveRelationsBehavior::className(),
+                'relations' => ['company', 'users', 'links' => ['scenario' => Link::SOME_SCENARIO]]
+            ],
+        ];
+    }  
+...
+```
+> **Tips:**
 > For relations not involving a junction table by using the `via()` or `viaTable()` methods, you should remove the attributes pointing to the owner model from the 'required' validation rules to be able to pass the validations.
+
+> **Note:**
+> If an error occurs for any reason during the saving process of related records in the afterSave event, a `yii\db\Exception` will be thrown on the first occurring error.
+> An error message will be attached to the relation attribute of the owner model.
+> In order to be able to handle these cases in a user-friendly way, one will have to catch `yii\db\Exception` exceptions.
 
 Populate the model and its relations with input data
 ----------------------------------------------------
