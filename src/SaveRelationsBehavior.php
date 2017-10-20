@@ -182,6 +182,9 @@ class SaveRelationsBehavior extends Behavior
             foreach ($modelClass::primaryKey() as $modelAttribute) {
                 if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
+                } else {
+                    $fks = [];
+                    break;
                 }
             }
             if (empty($fks)) {

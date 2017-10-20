@@ -326,6 +326,21 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    public function testCreateHasManyRelationWithOneOfTheMissingKeyOfCompositeFk()
+    {
+        $project = Project::findOne(1);
+        $project->links = [
+            [
+                'language' => 'fr',
+            ]
+        ];
+        $this->assertCount(1, $project->links, 'Project should have 1 links after assignment');
+        $this->assertTrue(
+            $project->links[0]->isNewRecord,
+            'Related link without one of the missed key of composite fk must be is new record'
+        );
+    }
+
     public function testSaveNewHasManyRelationWithCompositeFksAsArrayShouldSucceed()
     {
         $project = Project::findOne(1);
