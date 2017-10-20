@@ -86,7 +86,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function canSetProperty($name, $checkVars = true)
     {
-        if (in_array($name, $this->relations) && $this->owner->getRelation($name, false)) {
+        if (in_array($name, $this->_relations) && $this->owner->getRelation($name, false)) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
@@ -181,6 +181,8 @@ class SaveRelationsBehavior extends Behavior
             foreach ($modelClass::primaryKey() as $modelAttribute) {
                 if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
+                } else {
+                    break;
                 }
             }
             if (empty($fks)) {
