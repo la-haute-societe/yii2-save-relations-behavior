@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.3.1] under development
+### Added
+- Enh #21: Better support of partial composite keys (thx @execut)
+
 ## [1.3.0]
 ### Added
 - Enh #3: Ability to define validation scenario for related records
