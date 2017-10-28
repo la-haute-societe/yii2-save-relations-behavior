@@ -1,7 +1,8 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
-## [1.3.1] under development
+## [1.3.1]
 ### Added
+- Enh #19: Support for defining relations through the `getRelation` method (thx @execut)
 - Enh #21: Better support of partial composite keys (thx @execut)
 
 ## [1.3.0]
