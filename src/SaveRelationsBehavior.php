@@ -8,7 +8,6 @@ use yii\base\Behavior;
 use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
-use yii\db\ActiveQueryInterface;
 use yii\db\BaseActiveRecord;
 use Yii\db\Exception as DbException;
 use yii\db\Transaction;
@@ -86,8 +85,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function canSetProperty($name, $checkVars = true)
     {
-        $getter = 'get' . $name;
-        if (in_array($name, $this->_relations) && method_exists($this->owner, $getter) && $this->owner->$getter() instanceof ActiveQueryInterface) {
+        if (in_array($name, $this->_relations) && $this->owner->getRelation($name, false)) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
