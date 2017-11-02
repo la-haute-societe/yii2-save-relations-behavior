@@ -238,7 +238,7 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
                             Yii::trace("Setting foreign keys for {$relationName}", __METHOD__);
                             foreach ($relation->link as $relatedAttribute => $modelAttribute) {
-                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute}) {
+                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute} && !in_array($modelAttribute, $model->primaryKey())) {
                                     $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
                                 }
                             }
