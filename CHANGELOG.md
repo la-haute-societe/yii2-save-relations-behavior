@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.4.0]
+### Added
+- Enh #15: Allow to save extra columns to junction table (thx @sspat)
+
 ## [1.3.2]
 ### Fixed
 - Bug #22: Fix for HasOne relation pointing to the owner primary key (thx @mythicallage)
