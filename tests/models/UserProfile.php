@@ -18,7 +18,10 @@ class UserProfile extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            ['bio', 'required']
+            [['user_id'], 'integer'],
+            ['bio', 'required'],
+            [['user_id'], 'unique'],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']]
         ];
     }
 
