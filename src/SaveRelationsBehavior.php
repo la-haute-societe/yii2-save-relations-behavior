@@ -238,7 +238,7 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
                             Yii::trace("Setting foreign keys for {$relationName}", __METHOD__);
                             foreach ($relation->link as $relatedAttribute => $modelAttribute) {
-                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute} && !in_array($modelAttribute, $model->primaryKey())) {
+                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute}) {
                                     $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
                                 }
                             }
@@ -252,7 +252,7 @@ class SaveRelationsBehavior extends Behavior
     /**
      * For each related model, try to save it first.
      * If set in the owner model, operation is done in a transactional way so if one of the models should not validate
-     * or be saved, a rollback will occur.
+     * or be saved, a rollback will occur.,
      * This is done during the before validation process to be able to set the related foreign keys.
      * @param BaseActiveRecord $model
      * @param ModelEvent $event
@@ -260,7 +260,10 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
-        if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT)) || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE)) || $model->isTransactional($model::OP_ALL)) {
+        if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
+            || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
+            || $model->isTransactional($model::OP_ALL)
+        ) {
             $this->_transaction = $model->getDb()->beginTransaction();
         }
         try {
@@ -269,9 +272,16 @@ class SaveRelationsBehavior extends Behavior
                     $relation = $model->getRelation($relationName);
                     if (!empty($model->{$relationName})) {
                         if ($relation->multiple === false) {
-                            // Save Has one relation new record
-                            $pettyRelationName = Inflector::camel2words($relationName, true);
-                            $this->saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
+                            $relationModel = $model->{$relationName};
+                            if (!($model::isPrimaryKey(array_values($relation->link))
+                                && $relationModel::isPrimaryKey(array_keys($relation->link))
+                                && $model->getIsNewRecord()
+                                && $relationModel->getIsNewRecord()
+                            )) {
+                                // Save Has one relation new record
+                                $pettyRelationName = Inflector::camel2words($relationName, true);
+                                $this->saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
+                            }
                         } else {
                             // Save Has many relations new records
                             /** @var BaseActiveRecord $relationModel */
