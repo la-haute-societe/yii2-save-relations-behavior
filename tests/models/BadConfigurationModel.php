@@ -1,17 +1,27 @@
 <?php
+/**
+ * @link http://www.lahautesociete.com
+ * @copyright Copyright (c) 2016 La Haute Société
+ */
 
 namespace tests\models;
 
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
-class User extends \yii\db\ActiveRecord
+/**
+ * DummyModel class
+ *
+ * @author albanjubert
+ **/
+class BadConfigurationModel extends \yii\db\ActiveRecord
 {
+
     /**
      * @inheritdoc
      */
     public static function tableName()
     {
-        return 'user';
+        return 'dummy';
     }
 
     /**
@@ -22,28 +32,17 @@ class User extends \yii\db\ActiveRecord
         return [
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['userProfile']
+                'relations' => ['children']
             ],
-        ];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function rules()
-    {
-        return [
-            ['username', 'required'],
-            ['username', 'unique', 'targetClass' => '\tests\models\User'],
         ];
     }
 
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getUserProfile()
+    public function getChildren()
     {
-        return $this->hasOne(UserProfile::className(), ['user_id' => 'id']);
+        return $this->hasOne(DummyModel::className(), ['id' => 'parent_id']);
     }
 
 }

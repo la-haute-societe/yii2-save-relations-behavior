@@ -3,7 +3,6 @@
 namespace tests;
 
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
-use RuntimeException;
 use tests\models\Company;
 use tests\models\DummyModel;
 use tests\models\DummyModelParent;
@@ -32,6 +31,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('project_user')->execute();
         $db->createCommand()->dropTable('project')->execute();
         $db->createCommand()->dropTable('user')->execute();
+        $db->createCommand()->dropTable('user_profile')->execute();
         $db->createCommand()->dropTable('company')->execute();
         $db->createCommand()->dropTable('link_type')->execute();
         $db->createCommand()->dropTable('link')->execute();
@@ -62,6 +62,12 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->createTable('user', [
             'id'       => $migration->primaryKey(),
             'username' => $migration->string()->notNull()->unique()
+        ])->execute();
+
+        // User profile
+        $db->createCommand()->createTable('user_profile', [
+            'user_id' => $migration->primaryKey(),
+            'bio'     => $migration->text(),
         ])->execute();
 
         // Project
@@ -161,20 +167,25 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         ])->execute();
     }
 
-    /**
-     * @expectedException RuntimeException
-     */
     public function testCannotAttachBehaviorToAnythingButActiveRecord()
     {
+        $this->setExpectedException('RuntimeException');
         $model = new Model();
         $model->attachBehavior('saveRelated', SaveRelationsBehavior::className());
     }
 
-    /**
-     * @expectedException \yii\base\InvalidCallException
-     */
+    public function testUnsupportedRelationProperty()
+    {
+        $this->setExpectedException('\yii\base\UnknownPropertyException');
+        $model = new Project();
+        $model->detachBehaviors();
+        $model->attachBehavior('saveRelated', new SaveRelationsBehavior(['relations' => ['links' => ['fakeParam' => 'Some value']]]));
+    }
+
+
     public function testTryToSetUndeclaredRelationShouldFail()
     {
+        $this->setExpectedException('\yii\base\InvalidCallException');
         $project = new Project();
         $project->projectUsers = [];
     }
@@ -626,6 +637,18 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         ];
         $project->loadRelations($data);
         $this->assertTrue($project->save(), 'Project could not be saved');
+    }
+
+    public function testSaveHasOneWithPrimaryKeyAsForeignKey()
+    {
+        $user = new User();
+        $user->username = 'Dummy More';
+        $user->userProfile = [
+            'bio' => "Some great bio"
+        ];
+        $this->assertTrue($user->save(), 'User could not be saved');
+        $this->assertEquals($user->userProfile->bio, "Some great bio");
+        $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 
 }
