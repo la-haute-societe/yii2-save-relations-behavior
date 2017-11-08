@@ -261,9 +261,14 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
-        if (($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-            || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-            || $model->isTransactional($model::OP_ALL)
+        if (
+            method_exists($model, 'isTransactional')
+            && is_null($model->getDb()->transaction)
+            && (
+                ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
+                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
+                || $model->isTransactional($model::OP_ALL)
+            )
         ) {
             $this->_transaction = $model->getDb()->beginTransaction();
         }
