@@ -305,6 +305,7 @@ class SaveRelationsBehavior extends Behavior
         } catch (Exception $e) {
             Yii::warning(get_class($e) . " was thrown while saving related records during beforeValidate event: " . $e->getMessage(), __METHOD__);
             $this->_rollback();
+            $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
             return false;
         }
