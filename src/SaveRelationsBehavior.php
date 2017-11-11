@@ -279,11 +279,9 @@ class SaveRelationsBehavior extends Behavior
                     if (!empty($model->{$relationName})) {
                         if ($relation->multiple === false) {
                             $relationModel = $model->{$relationName};
-                            if (!($model::isPrimaryKey(array_values($relation->link))
-                                && $relationModel::isPrimaryKey(array_keys($relation->link))
-                                && $model->getIsNewRecord()
-                                && $relationModel->getIsNewRecord()
-                            )) {
+                            $p1 = $model->isPrimaryKey(array_keys($relation->link));
+                            $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
+                            if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
                                 // Save Has one relation new record
                                 $pettyRelationName = Inflector::camel2words($relationName, true);
                                 $this->saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);

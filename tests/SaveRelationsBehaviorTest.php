@@ -60,8 +60,9 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 
         // User
         $db->createCommand()->createTable('user', [
-            'id'       => $migration->primaryKey(),
-            'username' => $migration->string()->notNull()->unique()
+            'id'         => $migration->primaryKey(),
+            'company_id' => $migration->integer()->notNull(),
+            'username'   => $migration->string()->notNull()->unique()
         ])->execute();
 
         // User profile
@@ -133,11 +134,11 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             [3, 'Google'],
         ])->execute();
 
-        $db->createCommand()->batchInsert('user', ['id', 'username'], [
-            [1, 'Steve Jobs'],
-            [2, 'Bill Gates'],
-            [3, 'Tim Cook'],
-            [4, 'Jonathan Ive']
+        $db->createCommand()->batchInsert('user', ['id', 'username', 'company_id'], [
+            [1, 'Steve Jobs', 1],
+            [2, 'Bill Gates', 2],
+            [3, 'Tim Cook', 1],
+            [4, 'Jonathan Ive', 1]
         ])->execute();
 
         $db->createCommand()->batchInsert('project', ['id', 'name', 'company_id'], [
@@ -312,6 +313,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $project->users, 'Project should have 1 user before save');
         $user = new User();
         $user->username = "Steve Balmer";
+        $user->company_id = 2;
         $project->users = array_merge($project->users, [$user]); // Add a fresh new user
         $this->assertCount(2, $project->users, 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
@@ -322,7 +324,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     {
         $project = Project::findOne(2);
         $this->assertCount(1, $project->users, 'Project should have 1 user before save');
-        $user = ['username' => "Steve Balmer"];
+        $user = ['username' => "Steve Balmer", 'company_id' => 2];
         $project->users = array_merge($project->users, [$user]); // Add a fresh new user
         $this->assertCount(2, $project->users, 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
@@ -643,6 +645,9 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     {
         $user = new User();
         $user->username = 'Dummy More';
+        $user->company = [
+            'name' => 'ACME'
+        ];
         $user->userProfile = [
             'bio' => "Some great bio"
         ];
@@ -651,4 +656,16 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 
+    public function testSaveCompanyWithUser()
+    {
+        $project = new Project();
+        $project->name = "Cartoon";
+        $company = new Company();
+        $company->name = 'ACME';
+        $user = new User();
+        $user->username = "Bugs Bunny";
+        $company->users = $user;
+        $project->company = $company;
+        $this->assertTrue($project->save(), 'Project could not be saved');
+    }
 }

@@ -22,7 +22,7 @@ class User extends \yii\db\ActiveRecord
         return [
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['userProfile']
+                'relations' => ['userProfile', 'company']
             ],
         ];
     }
@@ -33,8 +33,10 @@ class User extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            ['company_id', 'integer'],
             ['username', 'required'],
             ['username', 'unique', 'targetClass' => '\tests\models\User'],
+            [['company_id'], 'exist', 'skipOnError' => true, 'targetClass' => Company::className(), 'targetAttribute' => ['company_id' => 'id']],
         ];
     }
 
@@ -44,6 +46,14 @@ class User extends \yii\db\ActiveRecord
     public function getUserProfile()
     {
         return $this->hasOne(UserProfile::className(), ['user_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getCompany()
+    {
+        return $this->hasOne(Company::className(), ['id' => 'company_id']);
     }
 
 }

@@ -2,6 +2,8 @@
 
 namespace tests\models;
 
+use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
+
 class Company extends \yii\db\ActiveRecord
 {
 
@@ -16,12 +18,33 @@ class Company extends \yii\db\ActiveRecord
     /**
      * @inheritdoc
      */
+    public function behaviors()
+    {
+        return [
+            'saveRelations' => [
+                'class'     => SaveRelationsBehavior::className(),
+                'relations' => ['users']
+            ],
+        ];
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function rules()
     {
         return [
             ['name', 'required'],
             ['name', 'unique', 'targetClass' => '\tests\models\Company'],
         ];
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUsers()
+    {
+        return $this->hasMany(User::className(), ['company_id' => 'id']);
     }
 
 }
