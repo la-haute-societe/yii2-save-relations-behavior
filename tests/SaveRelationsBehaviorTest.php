@@ -656,7 +656,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 
-    public function testSaveCompanyWithUser()
+    public function testSaveNestedModels()
     {
         $project = new Project();
         $project->name = "Cartoon";
@@ -667,5 +667,47 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $company->users = $user;
         $project->company = $company;
         $this->assertTrue($project->save(), 'Project could not be saved');
+        $project->refresh();
+        $this->assertEquals($project->name, "Cartoon");
+        $this->assertEquals($project->company->name, "ACME");
+        $this->assertEquals($project->company->users[0]->username, "Bugs Bunny");
+    }
+
+    public function testUpdateHasOneNestedModels()
+    {
+        $project = Project::findOne(1);
+        $project->name = "Other name";
+        $company = $project->company;
+        $company->name = "Tutu";
+        $users = $company->users;
+        $user = $users[0];
+        $user->username = "Someone Else";
+        $users[0] = $user;
+        $company->users = $users;
+        $project->company = $company;
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $project->refresh();
+        $this->assertEquals($project->name, "Other name");
+        $this->assertEquals($project->company->name, "Tutu");
+        $this->assertEquals($project->company->users[0]->username, "Someone Else");
+    }
+
+    public function testUpdateHasManyNestedModels()
+    {
+        $project = Project::findOne(1);
+        $project->name = "Other name";
+        $users = $project->users;
+        $user = $users[0];
+        $company = $user->company;
+        $company->name = "Tutu";
+        $user->company = $company;
+        $users[0] = $user;
+        $user->username = "Someone Else";
+        $project->users = $users;
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $project->refresh();
+        $this->assertEquals($project->name, "Other name");
+        $this->assertEquals($project->company->name, "Tutu");
+        $this->assertEquals($project->company->users[0]->username, "Someone Else");
     }
 }

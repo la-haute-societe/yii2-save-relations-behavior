@@ -430,6 +430,10 @@ class SaveRelationsBehavior extends Behavior
                                     }
                                 }
                             }
+                            if ($model->{$relationName} instanceof BaseActiveRecord) {
+                                $model->{$relationName}->save();
+                            }
+
                         }
                         unset($this->_oldRelationValue[$relationName]);
                     }
