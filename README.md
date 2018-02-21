@@ -7,7 +7,7 @@ Automatically validate and save related Active Record models.
 Warning
 -------
 
-Please note that at that time, the extension in not compatible with Yii 2.0.14 yet. Stay tuned!
+Please note that at this time, the extension in not compatible with Yii 2.0.14 yet. Stay tuned!
 
 Features
 --------
