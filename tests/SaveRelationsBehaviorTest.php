@@ -336,7 +336,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     public function testSaveNewHasManyRelationWithCompositeFksShouldSucceed()
     {
         $project = Project::findOne(1);
-        $this->assertEquals(2, count($project->links), 'Project should have 2 links before save');
+        $this->assertCount(2, $project->links, 'Project should have 2 links before save');
         $link = new Link();
         $link->language = 'fr';
         $link->name = 'windows10';
@@ -370,7 +370,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     public function testSaveNewHasManyRelationWithCompositeFksAsArrayShouldSucceed()
     {
         $project = Project::findOne(1);
-        $this->assertEquals(2, count($project->links), 'Project should have 2 links before save');
+        $this->assertCount(2, $project->links, 'Project should have 2 links before save');
         $links = [
             ['language' => 'fr', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/fr-fr/windows/features'],
             ['language' => 'en', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/en-us/windows/features']
@@ -394,7 +394,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     public function testSaveUpdatedHasManyRelationWithCompositeFksAsArrayShouldSucceed()
     {
         $project = Project::findOne(1);
-        $this->assertEquals(2, count($project->links), 'Project should have 2 links before save');
+        $this->assertCount(2, $project->links, 'Project should have 2 links before save');
         $links = $project->links;
         $links[1]->link = "http://www.otherlink.com/";
         $project->links = $links;
@@ -436,7 +436,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $users = User::findAll([1, 3]);
         $this->assertCount(0, $project->users, 'Project should have 0 users before save');
         $project->users = $users; // Add users
-        $this->assertEquals(2, count($project->users), 'Project should have 2 users after assignment');
+        $this->assertCount(2, $project->users, 'Project should have 2 users after assignment');
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertCount(2, $project->users, 'Project should have 2 users after save');
         $this->assertEquals(2, $project->company_id, 'Company ID is not the one expected');
@@ -497,7 +497,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project = new Project();
         $user = User::findOne(1);
         $project->users = $user;
-        $this->assertEquals(1, count($project->users), 'Project should have 1 users after assignment');
+        $this->assertCount(1, $project->users, 'Project should have 1 users after assignment');
     }
 
     public function testAssignSingleEmptyObjectToHasManyRelationShouldSucceed()
@@ -505,7 +505,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project = new Project();
         $user = User::findOne(1);
         $project->users = null;
-        $this->assertEquals(0, count($project->users), 'Project should have 0 users after assignment');
+        $this->assertCount(0, $project->users, 'Project should have 0 users after assignment');
     }
 
     public function testChangeHasOneRelationWithAnotherObject()

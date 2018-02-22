@@ -1,6 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
 ## [1.4.0]
+### Fixed
+- Bug #25: Fix for Yii 2.0.14 compatibility. Has many relations were not saved. (thx @SanChes-tanker)
+
 ### Added
 - Enh #15: Allow to save extra columns to junction table (thx @sspat)
 

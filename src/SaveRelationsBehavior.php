@@ -24,15 +24,20 @@ class SaveRelationsBehavior extends Behavior
 
     public $relations = [];
     private $_relations = [];
-    private $_oldRelationValue = [];
+    private $_oldRelationValue = []; // Store initial relations value
+    private $_newRelationValue = []; // Store update relations value
     private $_relationsSaveStarted = false;
     private $_transaction;
+
 
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
 
     //private $_relationsCascadeDelete = []; //TODO
 
+    /**
+     * @inheritdoc
+     */
     public function init()
     {
         parent::init();
@@ -55,6 +60,9 @@ class SaveRelationsBehavior extends Behavior
         }
     }
 
+    /**
+     * @inheritdoc
+     */
     public function events()
     {
         return [
@@ -122,20 +130,6 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Set the named single relation with the given value
-     * @param $name
-     * @param $value
-     */
-    protected function setSingleRelation($name, $value)
-    {
-        $relation = $this->owner->getRelation($name);
-        if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation);
-        }
-        $this->owner->populateRelation($name, $value);
-    }
-
-    /**
      * Set the named multiple relation with the given value
      * @param $name
      * @param $value
@@ -159,6 +153,7 @@ class SaveRelationsBehavior extends Behavior
                 $newRelations[] = $this->processModelAsArray($entry, $relation);
             }
         }
+        $this->_newRelationValue[$name] = $newRelations;
         $this->owner->populateRelation($name, $newRelations);
     }
 
@@ -219,6 +214,21 @@ class SaveRelationsBehavior extends Behavior
             $relationModel->setAttributes($data);
         }
         return $relationModel;
+    }
+
+    /**
+     * Set the named single relation with the given value
+     * @param $name
+     * @param $value
+     */
+    protected function setSingleRelation($name, $value)
+    {
+        $relation = $this->owner->getRelation($name);
+        if (!($value instanceof $relation->modelClass)) {
+            $value = $this->processModelAsArray($value, $relation);
+        }
+        $this->_newRelationValue[$name] = $value;
+        $this->owner->populateRelation($name, $value);
     }
 
     /**
@@ -349,6 +359,34 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * Attach errors to owner relational attributes
+     * @param $relationModel
+     * @param $owner
+     * @param $relationName
+     * @param $pettyRelationName
+     */
+    private function _addError($relationModel, $owner, $relationName, $pettyRelationName)
+    {
+        foreach ($relationModel->errors as $attributeErrors) {
+            foreach ($attributeErrors as $error) {
+                $owner->addError($relationName, "{$pettyRelationName}: {$error}");
+            }
+        }
+    }
+
+    /**
+     * Rollback transaction if any
+     * @throws DbException
+     */
+    private function _rollback()
+    {
+        if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
+            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
+            Yii::info("Rolling back", __METHOD__);
+        }
+    }
+
+    /**
      * Link the related models.
      * If the models have not been changed, nothing will be done.
      * Related records will be linked to the owner model using the BaseActiveRecord `link()` method.
@@ -359,6 +397,10 @@ class SaveRelationsBehavior extends Behavior
             /** @var BaseActiveRecord $model */
             $model = $this->owner;
             $this->_relationsSaveStarted = true;
+            // Populate relations with updated values
+            foreach ($this->_newRelationValue as $name => $value) {
+                $this->owner->populateRelation($name, $value);
+            }
             try {
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
@@ -456,26 +498,6 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Populates relations with input data
-     * @param array $data
-     */
-    public function loadRelations($data)
-    {
-        /** @var BaseActiveRecord $model */
-        $model = $this->owner;
-        foreach ($this->_relations as $relationName) {
-            $relation = $model->getRelation($relationName);
-            $modelClass = $relation->modelClass;
-            /** @var BaseActiveRecord $relationalModel */
-            $relationalModel = new $modelClass;
-            $formName = $relationalModel->formName();
-            if (array_key_exists($formName, $data)) {
-                $model->{$relationName} = $data[$formName];
-            }
-        }
-    }
-
-    /**
      * Return array of columns to save to the junction table for a related model having a many-to-many relation.
      * @param string $relationName
      * @param BaseActiveRecord $model
@@ -529,27 +551,22 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Attach errors to owner relational attributes
-     * @param $relationModel
-     * @param $owner
-     * @param $relationName
-     * @param $pettyRelationName
-     * @return array
+     * Populates relations with input data
+     * @param array $data
      */
-    private function _addError($relationModel, $owner, $relationName, $pettyRelationName)
+    public function loadRelations($data)
     {
-        foreach ($relationModel->errors as $attributeErrors) {
-            foreach ($attributeErrors as $error) {
-                $owner->addError($relationName, "{$pettyRelationName}: {$error}");
+        /** @var BaseActiveRecord $model */
+        $model = $this->owner;
+        foreach ($this->_relations as $relationName) {
+            $relation = $model->getRelation($relationName);
+            $modelClass = $relation->modelClass;
+            /** @var BaseActiveRecord $relationalModel */
+            $relationalModel = new $modelClass;
+            $formName = $relationalModel->formName();
+            if (array_key_exists($formName, $data)) {
+                $model->{$relationName} = $data[$formName];
             }
-        }
-    }
-
-    private function _rollback()
-    {
-        if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-            Yii::info("Rolling back", __METHOD__);
         }
     }
 }
