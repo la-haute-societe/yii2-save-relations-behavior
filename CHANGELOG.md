@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.4.1]
+### Fixed
+- Bug #24: Fix a regression introduced in 1.4.0 release where validation of hasOne relations was not triggered. (thx @dabkhazi)
+
 ## [1.4.0]
 ### Fixed
 - Bug #25: Fix for Yii 2.0.14 compatibility. Has many relations were not saved. (thx @SanChes-tanker)

@@ -11,6 +11,7 @@ use tests\models\Project;
 use tests\models\ProjectNoTransactions;
 use tests\models\Tag;
 use tests\models\User;
+use tests\models\UserProfile;
 use Yii;
 use yii\base\Model;
 use yii\db\Migration;
@@ -709,5 +710,19 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($project->name, "Other name");
         $this->assertEquals($project->company->name, "Tutu");
         $this->assertEquals($project->company->users[0]->username, "Someone Else");
+    }
+
+    public function testHasOneRelationShouldTriggerOnBeforeValidateEvent()
+    {
+        $user = new User();
+        $user->setAttributes([
+            'username'   => 'Larry Page',
+            'company_id' => 3
+        ]);
+        $user->userProfile = new UserProfile();
+        $this->assertFalse($user->save(), 'User should not be saved');
+        $this->assertCount(1, $user->userProfile->getErrors());
+        $user->userProfile->bio = 'Lawrence Edward Page (born March 26, 1973) is an American computer scientist and Internet entrepreneur who co-founded Google with Sergey Brin.';
+        $this->assertTrue($user->save(), 'User could not be saved');
     }
 }
