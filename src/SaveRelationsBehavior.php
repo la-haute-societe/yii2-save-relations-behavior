@@ -236,10 +236,12 @@ class SaveRelationsBehavior extends Behavior
      * Before the owner model validation, save related models.
      * For `hasOne()` relations, set the according foreign keys of the owner model to be able to validate it
      * @param ModelEvent $event
+     * @throws DbException
+     * @throws \yii\base\InvalidConfigException
      */
     public function beforeValidate(ModelEvent $event)
     {
-        if ($this->_relationsSaveStarted == false && !empty($this->_oldRelationValue)) {
+        if ($this->_relationsSaveStarted === false && !empty($this->_oldRelationValue)) {
             /* @var $model BaseActiveRecord */
             $model = $this->owner;
             if ($this->saveRelatedRecords($model, $event)) {
@@ -271,6 +273,8 @@ class SaveRelationsBehavior extends Behavior
      * @param BaseActiveRecord $model
      * @param ModelEvent $event
      * @return bool
+     * @throws DbException
+     * @throws \yii\base\InvalidConfigException
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
@@ -288,6 +292,7 @@ class SaveRelationsBehavior extends Behavior
         try {
             foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                    /** @var ActiveQueryInterface $relation */
                     $relation = $model->getRelation($relationName);
                     if (!empty($model->{$relationName})) {
                         if ($relation->multiple === false) {
@@ -313,10 +318,10 @@ class SaveRelationsBehavior extends Behavior
                 }
             }
             if (!$event->isValid) {
-                throw new Exception("One of the related model could not be validated");
+                throw new Exception('One of the related model could not be validated');
             }
         } catch (Exception $e) {
-            Yii::warning(get_class($e) . " was thrown while saving related records during beforeValidate event: " . $e->getMessage(), __METHOD__);
+            Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
             $this->_rollback();
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
@@ -346,7 +351,6 @@ class SaveRelationsBehavior extends Behavior
      * @param string $pettyRelationName
      * @param string $relationName
      * @param BaseActiveRecord $relationModel
-     * @param ModelEvent $event
      */
     protected function validateRelationModel($pettyRelationName, $relationName, BaseActiveRecord $relationModel)
     {
@@ -387,7 +391,7 @@ class SaveRelationsBehavior extends Behavior
     {
         if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
             $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-            Yii::info("Rolling back", __METHOD__);
+            Yii::info('Rolling back', __METHOD__);
         }
     }
 
@@ -395,6 +399,7 @@ class SaveRelationsBehavior extends Behavior
      * Link the related models.
      * If the models have not been changed, nothing will be done.
      * Related records will be linked to the owner model using the BaseActiveRecord `link()` method.
+     * @throws Exception
      */
     public function afterSave()
     {
@@ -410,6 +415,7 @@ class SaveRelationsBehavior extends Behavior
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         Yii::debug("Linking {$relationName} relation", __METHOD__);
+                        /** @var ActiveQueryInterface $relation */
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === true) { // Has many relation
                             $this->_afterSaveHasManyRelation($model, $relationName);
@@ -420,7 +426,7 @@ class SaveRelationsBehavior extends Behavior
                     }
                 }
             } catch (Exception $e) {
-                Yii::warning(get_class($e) . " was thrown while saving related records during afterSave event: " . $e->getMessage(), __METHOD__);
+                Yii::warning(get_class($e) . ' was thrown while saving related records during afterSave event: ' . $e->getMessage(), __METHOD__);
                 $this->_rollback();
                 /***
                  * Sadly mandatory because the error occurred during afterSave event
@@ -441,6 +447,7 @@ class SaveRelationsBehavior extends Behavior
      * @param string $relationName
      * @param BaseActiveRecord $model
      * @return array
+     * @throws \RuntimeException
      */
     private function _getJunctionTableColumns($relationName, $model)
     {
@@ -473,10 +480,10 @@ class SaveRelationsBehavior extends Behavior
     {
         // Compute differences between initial relations and the current ones
         $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
-            return implode("-", $model->getPrimaryKey(true));
+            return implode('-', $model->getPrimaryKey(true));
         });
         $newPks = ArrayHelper::getColumn($updatedRelations, function (BaseActiveRecord $model) {
-            return implode("-", $model->getPrimaryKey(true));
+            return implode('-', $model->getPrimaryKey(true));
         });
         if ($forceSave) {
             $addedPks = $newPks;
@@ -492,7 +499,6 @@ class SaveRelationsBehavior extends Behavior
     /**
      * Populates relations with input data
      * @param array $data
-     * @throws \yii\base\InvalidConfigException
      */
     public function loadRelations($data)
     {
@@ -501,7 +507,7 @@ class SaveRelationsBehavior extends Behavior
         foreach ($this->_relations as $relationName) {
             $relation = $model->getRelation($relationName);
             $modelClass = $relation->modelClass;
-            /** @var BaseActiveRecord $relationalModel */
+            /** @var ActiveQueryInterface $relationalModel */
             $relationalModel = new $modelClass;
             $formName = $relationalModel->formName();
             if (array_key_exists($formName, $data)) {
@@ -513,6 +519,7 @@ class SaveRelationsBehavior extends Behavior
     /**
      * @param $owner
      * @param $relationName
+     * @throws \RuntimeException
      * @throws DbException
      */
     public function _afterSaveHasManyRelation($owner, $relationName)
@@ -521,7 +528,7 @@ class SaveRelationsBehavior extends Behavior
 
         // Process new relations
         $existingRecords = [];
-        /** @var BaseActiveRecord $relationModel */
+        /** @var ActiveQueryInterface $relationModel */
         foreach ($owner->{$relationName} as $i => $relationModel) {
             if ($relationModel->isNewRecord) {
                 if ($relation->via !== null) {
