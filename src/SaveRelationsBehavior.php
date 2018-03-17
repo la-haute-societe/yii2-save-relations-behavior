@@ -337,7 +337,7 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveModelRecord(BaseActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
     {
-        $this->validateRelationModel($pettyRelationName, $relationName, $model, $event);
+        $this->validateRelationModel($pettyRelationName, $relationName, $model);
         if ($event->isValid && (count($model->dirtyAttributes) || $model->isNewRecord)) {
             Yii::debug("Saving {$pettyRelationName} relation model", __METHOD__);
             $model->save(false);
@@ -523,65 +523,63 @@ class SaveRelationsBehavior extends Behavior
         $owner = $this->owner;
         $relation = $owner->getRelation($relationName);
 
-        if ($this->_hasActiveRelationTrait($relation)) {
-            // Process new relations
-            $existingRecords = [];
-            /** @var ActiveQuery $relationModel */
-            foreach ($owner->{$relationName} as $i => $relationModel) {
-                if ($relationModel->isNewRecord) {
-                    if ($relation->via !== null) {
-                        if ($relationModel->validate()) {
-                            $relationModel->save();
-                        } else {
-                            $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                            $this->_addError($relationModel, $owner, $relationName, $pettyRelationName);
-                            throw new DbException("Related record {$pettyRelationName} could not be saved.");
-                        }
-                    }
-                    $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
-                    $owner->link($relationName, $relationModel, $junctionTableColumns);
-                } else {
-                    $existingRecords[] = $relationModel;
-                }
-                if (count($relationModel->dirtyAttributes)) {
+        // Process new relations
+        $existingRecords = [];
+        /** @var ActiveQuery $relationModel */
+        foreach ($owner->{$relationName} as $i => $relationModel) {
+            if ($relationModel->isNewRecord) {
+                if ($relation->via !== null) {
                     if ($relationModel->validate()) {
                         $relationModel->save();
                     } else {
-                        $pettyRelationName = Inflector::camel2words($relationName, true);
+                        $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
                         $this->_addError($relationModel, $owner, $relationName, $pettyRelationName);
                         throw new DbException("Related record {$pettyRelationName} could not be saved.");
                     }
                 }
+                $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
+                $owner->link($relationName, $relationModel, $junctionTableColumns);
+            } else {
+                $existingRecords[] = $relationModel;
             }
-            $junctionTablePropertiesUsed = array_key_exists($relationName, $this->_relationsExtraColumns);
-
-            // Process existing added and deleted relations
-            list($addedPks, $deletedPks) = $this->_computePkDiff(
-                $this->_oldRelationValue[$relationName],
-                $existingRecords,
-                $junctionTablePropertiesUsed
-            );
-
-            // Deleted relations
-            $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
-                return implode('-', $model->getPrimaryKey(true));
-            });
-            $initialRelations = $owner->{$relationName};
-            foreach ($deletedPks as $key) {
-                $owner->unlink($relationName, $initialModels[$key], true);
-            }
-
-            // Added relations
-            $actualModels = ArrayHelper::index(
-                $junctionTablePropertiesUsed ? $initialRelations : $owner->{$relationName},
-                function (BaseActiveRecord $model) {
-                    return implode('-', $model->getPrimaryKey(true));
+            if (count($relationModel->dirtyAttributes)) {
+                if ($relationModel->validate()) {
+                    $relationModel->save();
+                } else {
+                    $pettyRelationName = Inflector::camel2words($relationName, true);
+                    $this->_addError($relationModel, $owner, $relationName, $pettyRelationName);
+                    throw new DbException("Related record {$pettyRelationName} could not be saved.");
                 }
-            );
-            foreach ($addedPks as $key) {
-                $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
-                $owner->link($relationName, $actualModels[$key], $junctionTableColumns);
             }
+        }
+        $junctionTablePropertiesUsed = array_key_exists($relationName, $this->_relationsExtraColumns);
+
+        // Process existing added and deleted relations
+        list($addedPks, $deletedPks) = $this->_computePkDiff(
+            $this->_oldRelationValue[$relationName],
+            $existingRecords,
+            $junctionTablePropertiesUsed
+        );
+
+        // Deleted relations
+        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
+            return implode('-', $model->getPrimaryKey(true));
+        });
+        $initialRelations = $owner->{$relationName};
+        foreach ($deletedPks as $key) {
+            $owner->unlink($relationName, $initialModels[$key], true);
+        }
+
+        // Added relations
+        $actualModels = ArrayHelper::index(
+            $junctionTablePropertiesUsed ? $initialRelations : $owner->{$relationName},
+            function (BaseActiveRecord $model) {
+                return implode('-', $model->getPrimaryKey(true));
+            }
+        );
+        foreach ($addedPks as $key) {
+            $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
+            $owner->link($relationName, $actualModels[$key], $junctionTableColumns);
         }
     }
 
@@ -591,31 +589,18 @@ class SaveRelationsBehavior extends Behavior
     private function _afterSaveHasOneRelation($relationName)
     {
         $owner = $this->owner;
-        $relation = $owner->getRelation($relationName);
 
-        if ($this->_hasActiveRelationTrait($relation)) {
-            if ($this->_oldRelationValue[$relationName] !== $owner->{$relationName}) {
-                if ($owner->{$relationName} instanceof BaseActiveRecord) {
-                    $owner->link($relationName, $owner->{$relationName});
-                } else {
-                    if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
-                        $owner->unlink($relationName, $this->_oldRelationValue[$relationName]);
-                    }
+        if ($this->_oldRelationValue[$relationName] !== $owner->{$relationName}) {
+            if ($owner->{$relationName} instanceof BaseActiveRecord) {
+                $owner->link($relationName, $owner->{$relationName});
+            } else {
+                if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
+                    $owner->unlink($relationName, $this->_oldRelationValue[$relationName]);
                 }
             }
-            if ($owner->{$relationName} instanceof BaseActiveRecord) {
-                $owner->{$relationName}->save();
-            }
         }
-    }
-
-    /**
-     * @param ActiveQuery $relation
-     * @return bool
-     */
-    private function _hasActiveRelationTrait(ActiveQuery $relation)
-    {
-        $relationTraits = class_uses($relation);
-        return in_array('yii\db\ActiveRelationTrait', $relationTraits);
+        if ($owner->{$relationName} instanceof BaseActiveRecord) {
+            $owner->{$relationName}->save();
+        }
     }
 }
