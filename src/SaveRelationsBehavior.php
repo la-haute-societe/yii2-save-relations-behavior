@@ -8,6 +8,7 @@ use yii\base\Behavior;
 use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
+use yii\db\ActiveQueryInterface;
 use yii\db\BaseActiveRecord;
 use yii\db\Exception as DbException;
 use yii\db\Transaction;
@@ -109,7 +110,7 @@ class SaveRelationsBehavior extends Behavior
     public function __set($name, $value)
     {
         if (in_array($name, $this->_relations)) {
-            Yii::trace("Setting {$name} relation value", __METHOD__);
+            Yii::debug("Setting {$name} relation value", __METHOD__);
             if (!isset($this->_oldRelationValue[$name])) {
                 if ($this->owner->isNewRecord) {
                     if ($this->owner->getRelation($name)->multiple === true) {
@@ -247,7 +248,7 @@ class SaveRelationsBehavior extends Behavior
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
-                            Yii::trace("Setting foreign keys for {$relationName}", __METHOD__);
+                            Yii::debug("Setting foreign keys for {$relationName}", __METHOD__);
                             foreach ($relation->link as $relatedAttribute => $modelAttribute) {
                                 if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute}) {
                                     $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
@@ -333,7 +334,7 @@ class SaveRelationsBehavior extends Behavior
     {
         $this->validateRelationModel($pettyRelationName, $relationName, $model, $event);
         if ($event->isValid && (count($model->dirtyAttributes) || $model->isNewRecord)) {
-            Yii::trace("Saving {$pettyRelationName} relation model", __METHOD__);
+            Yii::debug("Saving {$pettyRelationName} relation model", __METHOD__);
             $model->save(false);
         }
     }
@@ -353,7 +354,7 @@ class SaveRelationsBehavior extends Behavior
             if (key_exists($relationName, $this->_relationsScenario)) {
                 $relationModel->setScenario($this->_relationsScenario[$relationName]);
             }
-            Yii::trace("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . " scenario", __METHOD__);
+            Yii::debug("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . " scenario", __METHOD__);
             if (!$relationModel->validate()) {
                 $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
             }
@@ -395,7 +396,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function afterSave()
     {
-        if ($this->_relationsSaveStarted == false) {
+        if ($this->_relationsSaveStarted === false) {
             /** @var BaseActiveRecord $model */
             $model = $this->owner;
             $this->_relationsSaveStarted = true;
@@ -406,78 +407,80 @@ class SaveRelationsBehavior extends Behavior
             try {
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
-                        Yii::trace("Linking {$relationName} relation", __METHOD__);
+                        Yii::debug("Linking {$relationName} relation", __METHOD__);
                         $relation = $model->getRelation($relationName);
-                        if ($relation->multiple === true) { // Has many relation
-                            // Process new relations
-                            $existingRecords = [];
-                            /** @var BaseActiveRecord $relationModel */
-                            foreach ($model->{$relationName} as $i => $relationModel) {
-                                if ($relationModel->isNewRecord) {
-                                    if ($relation->via !== null) {
+                        if ($relation instanceof ActiveQueryInterface) {
+                            if ($relation->multiple === true) { // Has many relation
+                                // Process new relations
+                                $existingRecords = [];
+                                /** @var BaseActiveRecord $relationModel */
+                                foreach ($model->{$relationName} as $i => $relationModel) {
+                                    if ($relationModel->isNewRecord) {
+                                        if ($relation->via !== null) {
+                                            if ($relationModel->validate()) {
+                                                $relationModel->save();
+                                            } else {
+                                                $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
+                                                $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
+                                                throw new DbException("Related record {$pettyRelationName} could not be saved.");
+                                            }
+                                        }
+                                        $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
+                                        $model->link($relationName, $relationModel, $junctionTableColumns);
+                                    } else {
+                                        $existingRecords[] = $relationModel;
+                                    }
+                                    if (count($relationModel->dirtyAttributes)) {
                                         if ($relationModel->validate()) {
                                             $relationModel->save();
                                         } else {
-                                            $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
+                                            $pettyRelationName = Inflector::camel2words($relationName, true);
                                             $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
                                             throw new DbException("Related record {$pettyRelationName} could not be saved.");
                                         }
                                     }
-                                    $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
-                                    $model->link($relationName, $relationModel, $junctionTableColumns);
-                                } else {
-                                    $existingRecords[] = $relationModel;
                                 }
-                                if (count($relationModel->dirtyAttributes)) {
-                                    if ($relationModel->validate()) {
-                                        $relationModel->save();
-                                    } else {
-                                        $pettyRelationName = Inflector::camel2words($relationName, true);
-                                        $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
-                                        throw new DbException("Related record {$pettyRelationName} could not be saved.");
-                                    }
-                                }
-                            }
-                            $junctionTablePropertiesUsed = array_key_exists($relationName, $this->_relationsExtraColumns);
-                            // Process existing added and deleted relations
-                            list($addedPks, $deletedPks) = $this->_computePkDiff(
-                                $this->_oldRelationValue[$relationName],
-                                $existingRecords,
-                                $junctionTablePropertiesUsed
-                            );
-                            // Deleted relations
-                            $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
-                                return implode("-", $model->getPrimaryKey(true));
-                            });
-                            $initialRelations = $model->{$relationName};
-                            foreach ($deletedPks as $key) {
-                                $model->unlink($relationName, $initialModels[$key], true);
-                            }
-                            // Added relations
-                            $actualModels = ArrayHelper::index(
-                                $junctionTablePropertiesUsed ? $initialRelations : $model->{$relationName},
-                                function (BaseActiveRecord $model) {
+                                $junctionTablePropertiesUsed = array_key_exists($relationName, $this->_relationsExtraColumns);
+                                // Process existing added and deleted relations
+                                list($addedPks, $deletedPks) = $this->_computePkDiff(
+                                    $this->_oldRelationValue[$relationName],
+                                    $existingRecords,
+                                    $junctionTablePropertiesUsed
+                                );
+                                // Deleted relations
+                                $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
                                     return implode("-", $model->getPrimaryKey(true));
+                                });
+                                $initialRelations = $model->{$relationName};
+                                foreach ($deletedPks as $key) {
+                                    $model->unlink($relationName, $initialModels[$key], true);
                                 }
-                            );
-                            foreach ($addedPks as $key) {
-                                $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
-                                $model->link($relationName, $actualModels[$key], $junctionTableColumns);
-                            }
-                        } else { // Has one relation
-                            if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
-                                if ($model->{$relationName} instanceof BaseActiveRecord) {
-                                    $model->link($relationName, $model->{$relationName});
-                                } else {
-                                    if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
-                                        $model->unlink($relationName, $this->_oldRelationValue[$relationName]);
+                                // Added relations
+                                $actualModels = ArrayHelper::index(
+                                    $junctionTablePropertiesUsed ? $initialRelations : $model->{$relationName},
+                                    function (BaseActiveRecord $model) {
+                                        return implode("-", $model->getPrimaryKey(true));
+                                    }
+                                );
+                                foreach ($addedPks as $key) {
+                                    $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $actualModels[$key]);
+                                    $model->link($relationName, $actualModels[$key], $junctionTableColumns);
+                                }
+                            } else { // Has one relation
+                                if ($this->_oldRelationValue[$relationName] !== $model->{$relationName}) {
+                                    if ($model->{$relationName} instanceof BaseActiveRecord) {
+                                        $model->link($relationName, $model->{$relationName});
+                                    } else {
+                                        if ($this->_oldRelationValue[$relationName] instanceof BaseActiveRecord) {
+                                            $model->unlink($relationName, $this->_oldRelationValue[$relationName]);
+                                        }
                                     }
                                 }
-                            }
-                            if ($model->{$relationName} instanceof BaseActiveRecord) {
-                                $model->{$relationName}->save();
-                            }
+                                if ($model->{$relationName} instanceof BaseActiveRecord) {
+                                    $model->{$relationName}->save();
+                                }
 
+                            }
                         }
                         unset($this->_oldRelationValue[$relationName]);
                     }
