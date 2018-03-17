@@ -8,7 +8,7 @@ trait SaveRelationsTrait
     public function load($data, $formName = null)
     {
         $loaded = parent::load($data, $formName);
-        if ($loaded) {
+        if ($loaded && method_exists($this, 'loadRelations')) {
             $this->loadRelations($data, $formName = null);
         }
         return $loaded;

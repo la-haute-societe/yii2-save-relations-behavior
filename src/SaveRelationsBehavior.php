@@ -131,6 +131,21 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * Set the named single relation with the given value
+     * @param $name
+     * @param $value
+     */
+    protected function setSingleRelation($name, $value)
+    {
+        $relation = $this->owner->getRelation($name);
+        if (!($value instanceof $relation->modelClass)) {
+            $value = $this->processModelAsArray($value, $relation);
+        }
+        $this->_newRelationValue[$name] = $value;
+        $this->owner->populateRelation($name, $value);
+    }
+
+    /**
      * Set the named multiple relation with the given value
      * @param $name
      * @param $value
@@ -215,21 +230,6 @@ class SaveRelationsBehavior extends Behavior
             $relationModel->setAttributes($data);
         }
         return $relationModel;
-    }
-
-    /**
-     * Set the named single relation with the given value
-     * @param $name
-     * @param $value
-     */
-    protected function setSingleRelation($name, $value)
-    {
-        $relation = $this->owner->getRelation($name);
-        if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation);
-        }
-        $this->_newRelationValue[$name] = $value;
-        $this->owner->populateRelation($name, $value);
     }
 
     /**

@@ -2,7 +2,12 @@ Yii2 Active Record Save Relations Behavior
 ==========================================
 Automatically validate and save related Active Record models.
 
-[![Latest Stable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/stable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![Total Downloads](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/downloads)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![Latest Unstable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/unstable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) [![License](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/license)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
+[![Latest Stable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/stable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
+[![Total Downloads](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/downloads)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
+[![Code Coverage](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/?branch=master)
+[![Build Status](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/badges/build.png?b=master)](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/build-status/master)
+[![Latest Unstable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/unstable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
+[![License](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/license)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
 
 
 Features
