@@ -5,6 +5,7 @@ namespace lhs\Yii2SaveRelationsBehavior;
 use RuntimeException;
 use Yii;
 use yii\base\Behavior;
+use yii\base\Component;
 use yii\base\Exception;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
@@ -75,7 +76,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Check if the behavior is attached to an Active Record
-     * @param BaseActiveRecord $owner
+     * @param Component $owner
      * @throws RuntimeException
      */
     public function attach($owner)
@@ -95,7 +96,9 @@ class SaveRelationsBehavior extends Behavior
      */
     public function canSetProperty($name, $checkVars = true)
     {
-        if (in_array($name, $this->_relations) && $this->owner->getRelation($name, false)) {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        if (in_array($name, $this->_relations) && $owner->getRelation($name, false)) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
@@ -106,23 +109,26 @@ class SaveRelationsBehavior extends Behavior
      * a primary key value or an associative array
      * @param string $name
      * @param mixed $value
+     * @throws \yii\base\InvalidArgumentException
      */
     public function __set($name, $value)
     {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
         if (in_array($name, $this->_relations)) {
             Yii::debug("Setting {$name} relation value", __METHOD__);
             if (!isset($this->_oldRelationValue[$name])) {
-                if ($this->owner->isNewRecord) {
-                    if ($this->owner->getRelation($name)->multiple === true) {
+                if ($owner->isNewRecord) {
+                    if ($owner->getRelation($name)->multiple === true) {
                         $this->_oldRelationValue[$name] = [];
                     } else {
                         $this->_oldRelationValue[$name] = null;
                     }
                 } else {
-                    $this->_oldRelationValue[$name] = $this->owner->{$name};
+                    $this->_oldRelationValue[$name] = $owner->{$name};
                 }
             }
-            if ($this->owner->getRelation($name)->multiple === true) {
+            if ($owner->getRelation($name)->multiple === true) {
                 $this->setMultipleRelation($name, $value);
             } else {
                 $this->setSingleRelation($name, $value);
@@ -134,25 +140,31 @@ class SaveRelationsBehavior extends Behavior
      * Set the named single relation with the given value
      * @param $name
      * @param $value
+     * @throws \yii\base\InvalidArgumentException
      */
     protected function setSingleRelation($name, $value)
     {
-        $relation = $this->owner->getRelation($name);
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        $relation = $owner->getRelation($name);
         if (!($value instanceof $relation->modelClass)) {
             $value = $this->processModelAsArray($value, $relation);
         }
         $this->_newRelationValue[$name] = $value;
-        $this->owner->populateRelation($name, $value);
+        $owner->populateRelation($name, $value);
     }
 
     /**
      * Set the named multiple relation with the given value
      * @param $name
      * @param $value
+     * @throws \yii\base\InvalidArgumentException
      */
     protected function setMultipleRelation($name, $value)
     {
-        $relation = $this->owner->getRelation($name);
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        $relation = $owner->getRelation($name);
         $newRelations = [];
         if (!is_array($value)) {
             if (!empty($value)) {
@@ -170,7 +182,7 @@ class SaveRelationsBehavior extends Behavior
             }
         }
         $this->_newRelationValue[$name] = $newRelations;
-        $this->owner->populateRelation($name, $newRelations);
+        $owner->populateRelation($name, $newRelations);
     }
 
     /**
