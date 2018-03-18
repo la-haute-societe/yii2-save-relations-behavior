@@ -217,9 +217,7 @@ class SaveRelationsBehavior extends Behavior
             if (empty($fks)) {
                 // Get the right link definition
                 if ($relation->via instanceof BaseActiveRecord) {
-                    /** @var BaseActiveRecord|array $viaQuery */
-                    $viaQuery = $relation->via;
-                    $link = $viaQuery->link;
+                    $link = $relation->via->link;
                 } elseif (is_array($relation->via)) {
                     list($viaName, $viaQuery) = $relation->via;
                     $link = $viaQuery->link;
@@ -295,17 +293,7 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
-        if (
-            method_exists($model, 'isTransactional')
-            && is_null($model->getDb()->transaction)
-            && (
-                ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-                || $model->isTransactional($model::OP_ALL)
-            )
-        ) {
-            $this->_transaction = $model->getDb()->beginTransaction();
-        }
+        $this->startTransactionForModel($model);
         try {
             foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
@@ -634,6 +622,24 @@ class SaveRelationsBehavior extends Behavior
             }
         } else {
             $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
+        }
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     */
+    protected function startTransactionForModel(BaseActiveRecord $model)
+    {
+        if (
+            method_exists($model, 'isTransactional')
+            && is_null($model->getDb()->transaction)
+            && (
+                ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
+                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
+                || $model->isTransactional($model::OP_ALL)
+            )
+        ) {
+            $this->_transaction = $model->getDb()->beginTransaction();
         }
     }
 }
