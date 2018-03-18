@@ -98,7 +98,8 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
-        if (in_array($name, $this->_relations) && $owner->getRelation($name, false)) {
+        $relation = $owner->getRelation($name, false);
+        if (in_array($name, $this->_relations) && !is_null($relation)) {
             return true;
         }
         return parent::canSetProperty($name, $checkVars);
@@ -117,9 +118,11 @@ class SaveRelationsBehavior extends Behavior
         $owner = $this->owner;
         if (in_array($name, $this->_relations)) {
             Yii::debug("Setting {$name} relation value", __METHOD__);
+            /** @var ActiveQuery $relation */
+            $relation = $owner->getRelation($name);
             if (!isset($this->_oldRelationValue[$name])) {
                 if ($owner->isNewRecord) {
-                    if ($owner->getRelation($name)->multiple === true) {
+                    if ($relation->multiple === true) {
                         $this->_oldRelationValue[$name] = [];
                     } else {
                         $this->_oldRelationValue[$name] = null;
@@ -128,7 +131,7 @@ class SaveRelationsBehavior extends Behavior
                     $this->_oldRelationValue[$name] = $owner->{$name};
                 }
             }
-            if ($owner->getRelation($name)->multiple === true) {
+            if ($relation->multiple === true) {
                 $this->setMultipleRelation($name, $value);
             } else {
                 $this->setSingleRelation($name, $value);
@@ -146,6 +149,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
+        /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($name);
         if (!($value instanceof $relation->modelClass)) {
             $value = $this->processModelAsArray($value, $relation);
@@ -164,6 +168,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
+        /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($name);
         $newRelations = [];
         if (!is_array($value)) {
@@ -261,6 +266,7 @@ class SaveRelationsBehavior extends Behavior
                 // If relation is has_one, try to set related model attributes
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                        /** @var ActiveQuery $relation */
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
                             Yii::debug("Setting foreign keys for {$relationName}", __METHOD__);
@@ -391,7 +397,7 @@ class SaveRelationsBehavior extends Behavior
             $this->_relationsSaveStarted = true;
             // Populate relations with updated values
             foreach ($this->_newRelationValue as $name => $value) {
-                $this->owner->populateRelation($name, $value);
+                $owner->populateRelation($name, $value);
             }
             try {
                 foreach ($this->_relations as $relationName) {
@@ -487,6 +493,7 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
         foreach ($this->_relations as $relationName) {
+            /** @var ActiveQuery $relation */
             $relation = $model->getRelation($relationName);
             $modelClass = $relation->modelClass;
             /** @var ActiveQuery $relationalModel */
@@ -506,6 +513,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
+        /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($relationName);
 
         // Process new relations
