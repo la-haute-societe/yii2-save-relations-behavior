@@ -200,6 +200,7 @@ class SaveRelationsBehavior extends Behavior
             if (empty($fks)) {
                 // Get the right link definition
                 if ($relation->via instanceof BaseActiveRecord) {
+                    /** @var object|array $viaQuery */
                     $viaQuery = $relation->via;
                     $link = $viaQuery->link;
                 } elseif (is_array($relation->via)) {
@@ -294,23 +295,9 @@ class SaveRelationsBehavior extends Behavior
                     $relation = $model->getRelation($relationName);
                     if (!empty($model->{$relationName})) {
                         if ($relation->multiple === false) {
-                            $relationModel = $model->{$relationName};
-                            $p1 = $model->isPrimaryKey(array_keys($relation->link));
-                            $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
-                            $pettyRelationName = Inflector::camel2words($relationName, true);
-                            if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
-                                // Save Has one relation new record
-                                $this->saveModelRecord($model->{$relationName}, $event, $pettyRelationName, $relationName);
-                            } else {
-                                $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
-                            }
+                            $this->_prepareHasOneRelation($model, $relationName, $event);
                         } else {
-                            // Save Has many relations new records
-                            /** @var BaseActiveRecord $relationModel */
-                            foreach ($model->{$relationName} as $i => $relationModel) {
-                                $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                                $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
-                            }
+                            $this->_prepareHasManyRelation($model, $relationName, $event);
                         }
                     }
                 }
@@ -326,22 +313,6 @@ class SaveRelationsBehavior extends Behavior
             return false;
         }
         return true;
-    }
-
-    /**
-     * Validate and save the model if it is new or changed
-     * @param BaseActiveRecord $model
-     * @param ModelEvent $event
-     * @param $pettyRelationName
-     * @param $relationName
-     */
-    protected function saveModelRecord(BaseActiveRecord $model, ModelEvent $event, $pettyRelationName, $relationName)
-    {
-        $this->validateRelationModel($pettyRelationName, $relationName, $model);
-        if ($event->isValid && (count($model->dirtyAttributes) || $model->isNewRecord)) {
-            Yii::debug("Saving {$pettyRelationName} relation model", __METHOD__);
-            $model->save(false);
-        }
     }
 
     /**
@@ -362,6 +333,7 @@ class SaveRelationsBehavior extends Behavior
             if (!$relationModel->validate()) {
                 $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
             }
+
         }
     }
 
@@ -520,6 +492,7 @@ class SaveRelationsBehavior extends Behavior
      */
     public function _afterSaveHasManyRelation($relationName)
     {
+        /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         $relation = $owner->getRelation($relationName);
 
@@ -585,9 +558,11 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * @param $relationName
+     * @throws \yii\base\InvalidCallException
      */
     private function _afterSaveHasOneRelation($relationName)
     {
+        /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
 
         if ($this->_oldRelationValue[$relationName] !== $owner->{$relationName}) {
@@ -601,6 +576,44 @@ class SaveRelationsBehavior extends Behavior
         }
         if ($owner->{$relationName} instanceof BaseActiveRecord) {
             $owner->{$relationName}->save();
+        }
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     * @param $relationName
+     */
+    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
+    {
+        /** @var BaseActiveRecord $relationModel */
+        foreach ($model->{$relationName} as $i => $relationModel) {
+            $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
+            $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
+        }
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     * @param ModelEvent $event
+     * @param $relationName
+     */
+    private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
+    {
+        /** @var ActiveQuery $relation */
+        $relation = $model->getRelation($relationName);
+        $relationModel = $model->{$relationName};
+        $p1 = $model->isPrimaryKey(array_keys($relation->link));
+        $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
+        $pettyRelationName = Inflector::camel2words($relationName, true);
+        if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
+            // Save Has one relation new record
+            $this->validateRelationModel($pettyRelationName, $relationName, $model->{$relationName});
+            if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
+                Yii::debug("Saving {$pettyRelationName} relation model", __METHOD__);
+                $model->{$relationName}->save(false);
+            }
+        } else {
+            $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
         }
     }
 }
