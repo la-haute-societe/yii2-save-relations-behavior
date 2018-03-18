@@ -200,7 +200,7 @@ class SaveRelationsBehavior extends Behavior
             if (empty($fks)) {
                 // Get the right link definition
                 if ($relation->via instanceof BaseActiveRecord) {
-                    /** @var object|array $viaQuery */
+                    /** @var BaseActiveRecord|array $viaQuery */
                     $viaQuery = $relation->via;
                     $link = $viaQuery->link;
                 } elseif (is_array($relation->via)) {
@@ -297,7 +297,7 @@ class SaveRelationsBehavior extends Behavior
                         if ($relation->multiple === false) {
                             $this->_prepareHasOneRelation($model, $relationName, $event);
                         } else {
-                            $this->_prepareHasManyRelation($model, $relationName, $event);
+                            $this->_prepareHasManyRelation($model, $relationName);
                         }
                     }
                 }
@@ -501,7 +501,7 @@ class SaveRelationsBehavior extends Behavior
         /** @var ActiveQuery $relationModel */
         foreach ($owner->{$relationName} as $i => $relationModel) {
             if ($relationModel->isNewRecord) {
-                if ($relation->via !== null) {
+                if (!empty($relation->via)) {
                     if ($relationModel->validate()) {
                         $relationModel->save();
                     } else {
@@ -583,7 +583,7 @@ class SaveRelationsBehavior extends Behavior
      * @param BaseActiveRecord $model
      * @param $relationName
      */
-    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
+    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName)
     {
         /** @var BaseActiveRecord $relationModel */
         foreach ($model->{$relationName} as $i => $relationModel) {
