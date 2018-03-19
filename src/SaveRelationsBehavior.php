@@ -211,51 +211,8 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $modelClass */
         $modelClass = $relation->modelClass;
-        // Get the related model foreign keys
-        if (is_array($data)) {
-            $fks = [];
-
-            // search PK
-            foreach ($modelClass::primaryKey() as $modelAttribute) {
-                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
-                    $fks[$modelAttribute] = $data[$modelAttribute];
-                } else {
-                    $fks = [];
-                    break;
-                }
-            }
-            if (empty($fks)) {
-                // Get the right link definition
-                if ($relation->via instanceof BaseActiveRecord) {
-                    $link = $relation->via->link;
-                } elseif (is_array($relation->via)) {
-                    list($viaName, $viaQuery) = $relation->via;
-                    $link = $viaQuery->link;
-                } else {
-                    $link = $relation->link;
-                }
-                foreach ($link as $relatedAttribute => $modelAttribute) {
-                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
-                        $fks[$modelAttribute] = $data[$modelAttribute];
-                    }
-                }
-            }
-        } else {
-            $fks = $data;
-        }
-        // Load existing model or create one if no key was provided and data is not empty
-        /** @var BaseActiveRecord $relationModel */
-        $relationModel = null;
-        if (!empty($fks)) {
-            $relationModel = $modelClass::findOne($fks);
-        }
-        if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = new $modelClass;
-        }
-        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
-            $relationModel->setAttributes($data);
-        }
-        return $relationModel;
+        $fks = $this->_getRelatedFks($data, $relation, $modelClass);
+        return $this->_loadOrCreateRelationModel($data, $fks, $modelClass);
     }
 
     /**
@@ -636,16 +593,88 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function startTransactionForModel(BaseActiveRecord $model)
     {
-        if (
-            method_exists($model, 'isTransactional')
-            && is_null($model->getDb()->transaction)
-            && (
-                ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-                || $model->isTransactional($model::OP_ALL)
-            )
-        ) {
+        if ($this->isModelTransactional($model) && is_null($model->getDb()->transaction)) {
             $this->_transaction = $model->getDb()->beginTransaction();
         }
+    }
+
+
+    /**
+     * @param BaseActiveRecord $model
+     * @return bool
+     */
+    protected function isModelTransactional(BaseActiveRecord $model)
+    {
+        if (method_exists($model, 'isTransactional')) {
+            return ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
+                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
+                || $model->isTransactional($model::OP_ALL);
+        }
+        return false;
+    }
+
+    /**
+     * Load existing model or create one if no key was provided and data is not empty
+     * @param $data
+     * @param $fks
+     * @param $modelClass
+     * @return BaseActiveRecord
+     */
+    private function _loadOrCreateRelationModel($data, $fks, $modelClass)
+    {
+        /** @var BaseActiveRecord $relationModel */
+        $relationModel = null;
+        if (!empty($fks)) {
+            $relationModel = $modelClass::findOne($fks);
+        }
+        if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
+            $relationModel = new $modelClass;
+        }
+        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
+            $relationModel->setAttributes($data);
+        }
+        return $relationModel;
+    }
+
+    /**
+     * Get the related model foreign keys
+     * @param $data
+     * @param $relation
+     * @param BaseActiveRecord $modelClass
+     * @return array
+     */
+    private function _getRelatedFks($data, $relation, $modelClass)
+    {
+        $fks = [];
+        if (is_array($data)) {
+            // search PK
+            foreach ($modelClass::primaryKey() as $modelAttribute) {
+                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                    $fks[$modelAttribute] = $data[$modelAttribute];
+                } else {
+                    $fks = [];
+                    break;
+                }
+            }
+            if (empty($fks)) {
+                // Get the right link definition
+                if ($relation->via instanceof BaseActiveRecord) {
+                    $link = $relation->via->link;
+                } elseif (is_array($relation->via)) {
+                    list($viaName, $viaQuery) = $relation->via;
+                    $link = $viaQuery->link;
+                } else {
+                    $link = $relation->link;
+                }
+                foreach ($link as $relatedAttribute => $modelAttribute) {
+                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                        $fks[$modelAttribute] = $data[$modelAttribute];
+                    }
+                }
+            }
+        } else {
+            $fks = $data;
+        }
+        return $fks;
     }
 }
