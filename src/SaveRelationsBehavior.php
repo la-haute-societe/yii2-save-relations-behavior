@@ -37,7 +37,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * @param $relationName
-     * @param null $i
+     * @param int|null $i
      * @return string
      */
     protected static function prettyRelationName($relationName, $i = null)
