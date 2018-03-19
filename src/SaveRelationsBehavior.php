@@ -35,6 +35,16 @@ class SaveRelationsBehavior extends Behavior
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
 
+    /**
+     * @param $relationName
+     * @param null $i
+     * @return string
+     */
+    protected static function prettyRelationName($relationName, $i = null)
+    {
+        return Inflector::camel2words($relationName, true) . (is_null($i) ? '' : " #{$i}");
+    }
+
     //private $_relationsCascadeDelete = []; //TODO
 
     /**
@@ -323,11 +333,11 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Validate a relation model and add an error message to owner model attribute if needed
-     * @param string $pettyRelationName
+     * @param string $prettyRelationName
      * @param string $relationName
      * @param BaseActiveRecord $relationModel
      */
-    protected function validateRelationModel($pettyRelationName, $relationName, BaseActiveRecord $relationModel)
+    protected function validateRelationModel($prettyRelationName, $relationName, BaseActiveRecord $relationModel)
     {
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
@@ -335,9 +345,9 @@ class SaveRelationsBehavior extends Behavior
             if (array_key_exists($relationName, $this->_relationsScenario)) {
                 $relationModel->setScenario($this->_relationsScenario[$relationName]);
             }
-            Yii::debug("Validating {$pettyRelationName} relation model using " . $relationModel->scenario . ' scenario', __METHOD__);
+            Yii::debug("Validating {$prettyRelationName} relation model using " . $relationModel->scenario . ' scenario', __METHOD__);
             if (!$relationModel->validate()) {
-                $this->_addError($relationModel, $model, $relationName, $pettyRelationName);
+                $this->_addError($relationModel, $model, $relationName, $prettyRelationName);
             }
 
         }
@@ -348,13 +358,13 @@ class SaveRelationsBehavior extends Behavior
      * @param $relationModel
      * @param $owner
      * @param $relationName
-     * @param $pettyRelationName
+     * @param $prettyRelationName
      */
-    private function _addError($relationModel, $owner, $relationName, $pettyRelationName)
+    private function _addError($relationModel, $owner, $relationName, $prettyRelationName)
     {
         foreach ($relationModel->errors as $attributeErrors) {
             foreach ($attributeErrors as $error) {
-                $owner->addError($relationName, "{$pettyRelationName}: {$error}");
+                $owner->addError($relationName, "{$prettyRelationName}: {$error}");
             }
         }
     }
@@ -513,9 +523,8 @@ class SaveRelationsBehavior extends Behavior
                     if ($relationModel->validate()) {
                         $relationModel->save();
                     } else {
-                        $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-                        $this->_addError($relationModel, $owner, $relationName, $pettyRelationName);
-                        throw new DbException("Related record {$pettyRelationName} could not be saved.");
+                        $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName, $i));
+                        throw new DbException('Related record ' . self::prettyRelationName($relationName, $i) . ' could not be saved.');
                     }
                 }
                 $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
@@ -527,9 +536,8 @@ class SaveRelationsBehavior extends Behavior
                 if ($relationModel->validate()) {
                     $relationModel->save();
                 } else {
-                    $pettyRelationName = Inflector::camel2words($relationName, true);
-                    $this->_addError($relationModel, $owner, $relationName, $pettyRelationName);
-                    throw new DbException("Related record {$pettyRelationName} could not be saved.");
+                    $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName));
+                    throw new DbException('Related record ' . self::prettyRelationName($relationName) . ' could not be saved.');
                 }
             }
         }
@@ -595,8 +603,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $relationModel */
         foreach ($model->{$relationName} as $i => $relationModel) {
-            $pettyRelationName = Inflector::camel2words($relationName, true) . " #{$i}";
-            $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
+            $this->validateRelationModel(self::prettyRelationName($relationName, $i), $relationName, $relationModel);
         }
     }
 
@@ -612,16 +619,15 @@ class SaveRelationsBehavior extends Behavior
         $relationModel = $model->{$relationName};
         $p1 = $model->isPrimaryKey(array_keys($relation->link));
         $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
-        $pettyRelationName = Inflector::camel2words($relationName, true);
         if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
             // Save Has one relation new record
-            $this->validateRelationModel($pettyRelationName, $relationName, $model->{$relationName});
+            $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $model->{$relationName});
             if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
-                Yii::debug("Saving {$pettyRelationName} relation model", __METHOD__);
+                Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
                 $model->{$relationName}->save(false);
             }
         } else {
-            $this->validateRelationModel($pettyRelationName, $relationName, $relationModel);
+            $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $relationModel);
         }
     }
 
