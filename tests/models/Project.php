@@ -25,8 +25,9 @@ class Project extends \yii\db\ActiveRecord
                 'relations' => [
                     'company',
                     'users',
-                    'links' => ['scenario' => Link::SCENARIO_FIRST],
-                    'tags'  => [
+                    'links'        => ['scenario' => Link::SCENARIO_FIRST],
+                    'projectLinks' => ['cascadeDelete' => true],
+                    'tags'         => [
                         'extraColumns' => function ($model) {
                             /** @var $model Tag */
                             return [

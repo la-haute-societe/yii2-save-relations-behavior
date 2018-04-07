@@ -22,7 +22,7 @@ class User extends \yii\db\ActiveRecord
         return [
             'saveRelations' => [
                 'class'     => SaveRelationsBehavior::className(),
-                'relations' => ['userProfile', 'company']
+                'relations' => ['userProfile' => ['cascadeDelete' => true], 'company']
             ],
         ];
     }

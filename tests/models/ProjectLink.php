@@ -5,6 +5,8 @@ namespace tests\models;
 class ProjectLink extends \yii\db\ActiveRecord
 {
 
+    public $blockDelete = false;
+
     /**
      * @inheritdoc
      */
@@ -22,6 +24,15 @@ class ProjectLink extends \yii\db\ActiveRecord
             [['language', 'name', 'project_id'], 'required'],
             [['language', 'name'], 'unique']
         ];
+    }
+
+    public function beforeDelete()
+    {
+        if ($this->blockDelete === true) {
+            return false;
+        } else {
+            return parent::beforeDelete();
+        }
     }
 
 }

@@ -15,6 +15,7 @@ use yii\db\Exception as DbException;
 use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
+use yii\helpers\VarDumper;
 
 /**
  * This Active Record Behavior allows to validate and save the Model relations when the save() method is invoked.
@@ -28,12 +29,14 @@ class SaveRelationsBehavior extends Behavior
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
     private $_newRelationValue = []; // Store update relations value
+    private $_relationsToDelete = [];
     private $_relationsSaveStarted = false;
     private $_transaction;
 
 
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
+    private $_relationsCascadeDelete = [];
 
     /**
      * @param $relationName
@@ -53,7 +56,7 @@ class SaveRelationsBehavior extends Behavior
     public function init()
     {
         parent::init();
-        $allowedProperties = ['scenario', 'extraColumns'];
+        $allowedProperties = ['scenario', 'extraColumns', 'cascadeDelete'];
         foreach ($this->relations as $key => $value) {
             if (is_int($key)) {
                 $this->_relations[] = $value;
@@ -81,6 +84,8 @@ class SaveRelationsBehavior extends Behavior
             BaseActiveRecord::EVENT_BEFORE_VALIDATE => 'beforeValidate',
             BaseActiveRecord::EVENT_AFTER_INSERT    => 'afterSave',
             BaseActiveRecord::EVENT_AFTER_UPDATE    => 'afterSave',
+            BaseActiveRecord::EVENT_BEFORE_DELETE   => 'beforeDelete',
+            BaseActiveRecord::EVENT_AFTER_DELETE    => 'afterDelete'
         ];
     }
 
@@ -381,6 +386,46 @@ class SaveRelationsBehavior extends Behavior
             $this->_relationsSaveStarted = false;
             if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
                 $this->_transaction->commit();
+            }
+        }
+    }
+
+    /**
+     * Get the list of owner model relations in order to be able to delete them after its deletion
+     */
+    public function beforeDelete()
+    {
+        $model = $this->owner;
+        foreach ($this->_relationsCascadeDelete as $relationName => $params) {
+            if ($params === true) {
+                $relation = $model->getRelation($relationName);
+                if (!empty($model->{$relationName})) {
+                    if ($relation->multiple === true) { // Has many relation
+                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $model->{$relationName});
+                    } else {
+                        $this->_relationsToDelete[] = $model->{$relationName};
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Delete related models marked as to be deleted
+     * @throws Exception
+     */
+    public function afterDelete()
+    {
+        /** @var BaseActiveRecord $modelToDelete */
+        foreach ($this->_relationsToDelete as $modelToDelete) {
+            try {
+                if (!$modelToDelete->delete()) {
+                    throw new DbException('Could not delete the related record: ' . $modelToDelete::className() . '(' . VarDumper::dumpAsString($modelToDelete->primaryKey) . ')');
+                }
+            } catch (Exception $e) {
+                Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
+                $this->_rollback();
+                throw $e;
             }
         }
     }
