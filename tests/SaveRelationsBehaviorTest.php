@@ -8,6 +8,7 @@ use tests\models\DummyModel;
 use tests\models\DummyModelParent;
 use tests\models\Link;
 use tests\models\Project;
+use tests\models\ProjectLink;
 use tests\models\ProjectNoTransactions;
 use tests\models\Tag;
 use tests\models\User;
@@ -140,6 +141,13 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             [2, 'Bill Gates', 2],
             [3, 'Tim Cook', 1],
             [4, 'Jonathan Ive', 1]
+        ])->execute();
+
+        $db->createCommand()->batchInsert('user_profile', ['user_id', 'bio'], [
+            [1, 'Steven Paul Jobs (February 24, 1955 – October 5, 2011) was an American entrepreneur, business magnate, inventor, and industrial designer. He was the chairman, chief executive officer (CEO), and co-founder of Apple Inc.; CEO and majority shareholder of Pixar; a member of The Walt Disney Company\'s board of directors following its acquisition of Pixar; and the founder, chairman, and CEO of NeXT.'],
+            [2, 'William Henry Gates III (born October 28, 1955) is an American business magnate, investor, author, philanthropist, and co-founder of the Microsoft Corporation along with Paul Allen.'],
+            [3, 'Timothy Donald Cook (born November 1, 1960) is an American business executive, industrial engineer, and developer. Cook is the Chief Executive Officer of Apple Inc., previously serving as the company\'s Chief Operating Officer, under its founder Steve Jobs.'],
+            [4, 'Sir Jonathan Paul "Jony" Ive, KBE (born 27 February 1967), is an English industrial designer who is currently the chief design officer (CDO) of Apple and chancellor of the Royal College of Art in London.']
         ])->execute();
 
         $db->createCommand()->batchInsert('project', ['id', 'name', 'company_id'], [
@@ -657,6 +665,24 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 
+    public function testSaveHasOneReplaceRelatedWithNewRecord()
+    {
+        $profile = UserProfile::findOne(1);
+        $this->assertEquals('Steven Paul Jobs (February 24, 1955 – October 5, 2011) was an American entrepreneur, business magnate, inventor, and industrial designer. He was the chairman, chief executive officer (CEO), and co-founder of Apple Inc.; CEO and majority shareholder of Pixar; a member of The Walt Disney Company\'s board of directors following its acquisition of Pixar; and the founder, chairman, and CEO of NeXT.', $profile->bio, "Profile bio is wrong");
+        $data = [
+            'User' => [
+                'username'   => 'Someone Else',
+                'company_id' => 1
+            ]
+        ];
+        $profile->loadRelations($data);
+        $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
+        $this->assertTrue($profile->user->isNewRecord, "User should be a new record");
+        $profile->save();
+        $this->assertTrue($profile->save(), 'Profile could not be saved');
+        $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
+    }
+
     public function testSaveNestedModels()
     {
         $project = new Project();
@@ -724,5 +750,47 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $user->userProfile->getErrors());
         $user->userProfile->bio = 'Lawrence Edward Page (born March 26, 1973) is an American computer scientist and Internet entrepreneur who co-founded Google with Sergey Brin.';
         $this->assertTrue($user->save(), 'User could not be saved');
+    }
+
+    public function testDeleteRelatedHasOneShouldSucceed()
+    {
+        User::findOne(1)->delete();
+        $this->assertNull(UserProfile::findOne(1), 'Related user profile was not deleted');
+        $this->assertNotNull(UserProfile::findOne(2), 'Unrelated user profile was deleted');
+    }
+
+    public function testDeleteRelatedHasManyShouldSucceed()
+    {
+        Project::findOne(1)->delete();
+        $this->assertCount(0, ProjectLink::find()->where(['project_id' => 1])->all(), 'Related project links were not deleted');
+    }
+
+    public function testDeleteRelatedWithErrorShouldThrowAnException()
+    {
+        $this->setExpectedException('\yii\db\Exception');
+        $project = Project::findOne(1);
+        foreach ($project->projectLinks as $projectLink) {
+            $projectLink->blockDelete = true;
+        }
+        $this->assertFalse($project->delete(), 'Project could be deleted');
+    }
+
+    public function testSaveProjectWithCompanyWithUserShouldSucceed()
+    {
+        // Test for cascading save relations
+        $project = new Project();
+        $project->name = "Cartoon";
+        $company = new Company();
+        $company->name = 'ACME';
+        $user = new User();
+        $user->username = "Bugs Bunny";
+        $company->users = $user;
+        $project->company = $company;
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertEquals('ACME', $project->company->name, 'Project company\'s name is wrong');
+        $this->assertCount(1, $project->company->users, 'Count of related users is wrong');
+        $this->assertEquals('Bugs Bunny', $project->company->users[0]->username, 'Company user\'s name is wrong');
+        $this->assertFalse($project->company->isNewRecord, 'Company record should be saved');
+        $this->assertFalse($project->company->users[0]->isNewRecord, 'Company Users records should be saved');
     }
 }
