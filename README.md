@@ -16,6 +16,8 @@ Features
 - Works with existing as well as new related models
 - Composite primary keys are supported
 - Only pure Active Record API is used so it should work with any DB driver
+- As of 1.5.0 release, related records can now be deleted along with the main model
+
 
 Installation
 ------------
@@ -41,6 +43,7 @@ Configuring
 -----------
 
 Configure model as follows
+
 ```php
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 
@@ -124,6 +127,7 @@ class Project extends \yii\db\ActiveRecord
     }
 }
 ```
+
 > Though not mandatory, it is highly recommended to activate the transactions for the owner model.
 
 
@@ -131,6 +135,7 @@ Usage
 -----
 
 Every declared relations in the `relations` behavior parameter can now be set and saved as follow:
+
 ```php
 $project = new Project();
 $project->name = "New project";
@@ -138,7 +143,9 @@ $project->company = Company::findOne(2);
 $project->users = User::findAll([1,3]);
 $project->save();
 ```
+
 You can set related model by only specifying its primary key:
+
 ```php
 $project = new Project();
 $project->name = "Another project";
@@ -146,6 +153,7 @@ $project->company = 2;
 $project->users = [1,3];
 $project->save();
 ```
+
 You can even set related models as associative arrays like this:
 
 ```php
@@ -154,6 +162,7 @@ $project->company = ['name' => 'GiHub', 'description' => 'Awesome']; // Will cre
 // $project->company = ['id' => 3, 'name' => 'GiHub', 'description' => 'Awesome']; // Will update an existing company record
 $project->save();
 ```
+
 Attributes of the related model will be massively assigned using the `load() method. So remember to declare the according attributes as safe in the rules of the related model.
 
 > **Notes:**
@@ -161,6 +170,7 @@ Attributes of the related model will be massively assigned using the `load() met
 > - Only newly created or changed related models will be saved.
 
 > See the PHPUnit tests for more examples.
+
 
 Populate additional junction table columns in a many-to-many relation
 ---------------------------------------------------------------------
@@ -171,6 +181,7 @@ See the configuration section for examples.
 > If junction table properties are configured for a relation the rows associated with the related models in the junction table will be deleted and inserted again on each saving
 > to ensure that changes to the junction table properties are saved too.
 
+
 Validation
 ----------
 Every declared related models will be validated prior to be saved. If any validation fails, for each related model attribute in error, an error associated with the named relation will be added to the owner model.
@@ -179,6 +190,7 @@ For `hasMany()` relations, the index of the related model will be used to identi
 
 It is possible to specify the validation scenario for each relation by declaring an associative array in which the `scenario` key must contain the needed scenario value.
 For instance, in the following configuration, the `links ` related records will be validated using the `Link::SOME_SCENARIO` scenario:
+
 ```php
 ...
     public function behaviors()
@@ -200,12 +212,37 @@ For instance, in the following configuration, the `links ` related records will 
 > An error message will be attached to the relation attribute of the owner model.
 > In order to be able to handle these cases in a user-friendly way, one will have to catch `yii\db\Exception` exceptions.
 
+
+Delete related records when the main model is deleted
+-----------------------------------------------------
+
+For DBMs with no built in relational constraints, as of 1.5.0 release, one can now specify a relation to be deleted along with the main model.
+
+To do so, the relation should be declared with a property `cascadeDelete` set to true.
+For example, related `projectLinks` records will automaticaly be deleted when the main model will be deleted:
+
+```php
+...
+'saveRelations' => [
+    'class'     => SaveRelationsBehavior::className(),
+    'relations' => [
+        'projectLinks' => ['cascadeDelete' => true]
+    ],
+],
+...
+```
+
+> **Note:**
+> Every records related to the main model as they are defined in their `ActiveQuery` statement will be deleted.
+
+
 Populate the model and its relations with input data
 ----------------------------------------------------
 This behavior adds a convenient method to load relations models attributes in the same way that the load() method does.
 Simply call the `loadRelations()` with the according input data.
 
 For instance:
+
 ```php
 $project = Project::findOne(1);
 /**
