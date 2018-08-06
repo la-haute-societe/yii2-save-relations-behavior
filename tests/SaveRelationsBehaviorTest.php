@@ -665,6 +665,24 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 
+    public function testSaveHasOneReplaceRelatedWithNewRecord()
+    {
+        $profile = UserProfile::findOne(1);
+        $this->assertEquals('Steven Paul Jobs (February 24, 1955 – October 5, 2011) was an American entrepreneur, business magnate, inventor, and industrial designer. He was the chairman, chief executive officer (CEO), and co-founder of Apple Inc.; CEO and majority shareholder of Pixar; a member of The Walt Disney Company\'s board of directors following its acquisition of Pixar; and the founder, chairman, and CEO of NeXT.', $profile->bio, "Profile bio is wrong");
+        $data = [
+            'User' => [
+                'username'   => 'Someone Else',
+                'company_id' => 1
+            ]
+        ];
+        $profile->loadRelations($data);
+        $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
+        $this->assertTrue($profile->user->isNewRecord, "User should be a new record");
+        $profile->save();
+        $this->assertTrue($profile->save(), 'Profile could not be saved');
+        $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
+    }
+
     public function testSaveNestedModels()
     {
         $project = new Project();

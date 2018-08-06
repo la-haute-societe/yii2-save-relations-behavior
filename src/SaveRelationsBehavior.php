@@ -39,18 +39,6 @@ class SaveRelationsBehavior extends Behavior
     private $_relationsCascadeDelete = [];
 
     /**
-     * @param $relationName
-     * @param int|null $i
-     * @return string
-     */
-    protected static function prettyRelationName($relationName, $i = null)
-    {
-        return Inflector::camel2words($relationName, true) . (is_null($i) ? '' : " #{$i}");
-    }
-
-    //private $_relationsCascadeDelete = []; //TODO
-
-    /**
      * @inheritdoc
      */
     public function init()
@@ -74,6 +62,8 @@ class SaveRelationsBehavior extends Behavior
             }
         }
     }
+
+    //private $_relationsCascadeDelete = []; //TODO
 
     /**
      * @inheritdoc
@@ -155,25 +145,6 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Set the named single relation with the given value
-     * @param $name
-     * @param $value
-     * @throws \yii\base\InvalidArgumentException
-     */
-    protected function setSingleRelation($name, $value)
-    {
-        /** @var BaseActiveRecord $owner */
-        $owner = $this->owner;
-        /** @var ActiveQuery $relation */
-        $relation = $owner->getRelation($name);
-        if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation);
-        }
-        $this->_newRelationValue[$name] = $value;
-        $owner->populateRelation($name, $value);
-    }
-
-    /**
      * Set the named multiple relation with the given value
      * @param $name
      * @param $value
@@ -218,6 +189,91 @@ class SaveRelationsBehavior extends Behavior
         $modelClass = $relation->modelClass;
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
         return $this->_loadOrCreateRelationModel($data, $fks, $modelClass);
+    }
+
+    /**
+     * Get the related model foreign keys
+     * @param $data
+     * @param $relation
+     * @param BaseActiveRecord $modelClass
+     * @return array
+     */
+    private function _getRelatedFks($data, $relation, $modelClass)
+    {
+        $fks = [];
+        if (is_array($data)) {
+            // search PK
+            foreach ($modelClass::primaryKey() as $modelAttribute) {
+                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                    $fks[$modelAttribute] = $data[$modelAttribute];
+                } else {
+                    $fks = [];
+                    break;
+                }
+            }
+            if (empty($fks)) {
+                // Get the right link definition
+                if ($relation->via instanceof BaseActiveRecord) {
+                    $link = $relation->via->link;
+                } elseif (is_array($relation->via)) {
+                    list($viaName, $viaQuery) = $relation->via;
+                    $link = $viaQuery->link;
+                } else {
+                    $link = $relation->link;
+                }
+                foreach ($link as $relatedAttribute => $modelAttribute) {
+                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                        $fks[$modelAttribute] = $data[$modelAttribute];
+                    }
+                }
+            }
+        } else {
+            $fks = $data;
+        }
+        return $fks;
+    }
+
+    /**
+     * Load existing model or create one if no key was provided and data is not empty
+     * @param $data
+     * @param $fks
+     * @param $modelClass
+     * @return BaseActiveRecord
+     */
+    private function _loadOrCreateRelationModel($data, $fks, $modelClass)
+    {
+
+        /** @var BaseActiveRecord $relationModel */
+        $relationModel = null;
+        if (!empty($fks)) {
+            $relationModel = $modelClass::findOne($fks);
+        }
+        if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
+            $relationModel = new $modelClass;
+        }
+        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
+            $relationModel->setAttributes($data);
+        }
+        return $relationModel;
+    }
+
+    /**
+     * Set the named single relation with the given value
+     * @param $name
+     * @param $value
+     * @throws \yii\base\InvalidArgumentException
+     */
+    protected function setSingleRelation($name, $value)
+    {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        /** @var ActiveQuery $relation */
+        $relation = $owner->getRelation($name);
+        if (!($value instanceof $relation->modelClass)) {
+            $value = $this->processModelAsArray($value, $relation);
+        }
+        $this->_newRelationValue[$name] = $value;
+        $owner->populateRelation($name, $value);
     }
 
     /**
@@ -294,6 +350,50 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * @param BaseActiveRecord $model
+     */
+    protected function startTransactionForModel(BaseActiveRecord $model)
+    {
+        if ($this->isModelTransactional($model) && is_null($model->getDb()->transaction)) {
+            $this->_transaction = $model->getDb()->beginTransaction();
+        }
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     * @return bool
+     */
+    protected function isModelTransactional(BaseActiveRecord $model)
+    {
+        if (method_exists($model, 'isTransactional')) {
+            return ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
+                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
+                || $model->isTransactional($model::OP_ALL);
+        }
+        return false;
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     * @param ModelEvent $event
+     * @param $relationName
+     */
+    private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
+    {
+        /** @var ActiveQuery $relation */
+        $relation = $model->getRelation($relationName);
+        $relationModel = $model->{$relationName};
+        $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $model->{$relationName});
+        if ($relationModel->getIsNewRecord()) {
+            // Save Has one relation new record
+            if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
+                Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
+                $model->{$relationName}->save();
+            }
+        }
+    }
+
+    /**
      * Validate a relation model and add an error message to owner model attribute if needed
      * @param string $prettyRelationName
      * @param string $relationName
@@ -328,6 +428,28 @@ class SaveRelationsBehavior extends Behavior
             foreach ($attributeErrors as $error) {
                 $owner->addError($relationName, "{$prettyRelationName}: {$error}");
             }
+        }
+    }
+
+    /**
+     * @param $relationName
+     * @param int|null $i
+     * @return string
+     */
+    protected static function prettyRelationName($relationName, $i = null)
+    {
+        return Inflector::camel2words($relationName, true) . (is_null($i) ? '' : " #{$i}");
+    }
+
+    /**
+     * @param BaseActiveRecord $model
+     * @param $relationName
+     */
+    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName)
+    {
+        /** @var BaseActiveRecord $relationModel */
+        foreach ($model->{$relationName} as $i => $relationModel) {
+            $this->validateRelationModel(self::prettyRelationName($relationName, $i), $relationName, $relationModel);
         }
     }
 
@@ -386,121 +508,6 @@ class SaveRelationsBehavior extends Behavior
             $this->_relationsSaveStarted = false;
             if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
                 $this->_transaction->commit();
-            }
-        }
-    }
-
-    /**
-     * Get the list of owner model relations in order to be able to delete them after its deletion
-     */
-    public function beforeDelete()
-    {
-        $model = $this->owner;
-        foreach ($this->_relationsCascadeDelete as $relationName => $params) {
-            if ($params === true) {
-                $relation = $model->getRelation($relationName);
-                if (!empty($model->{$relationName})) {
-                    if ($relation->multiple === true) { // Has many relation
-                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $model->{$relationName});
-                    } else {
-                        $this->_relationsToDelete[] = $model->{$relationName};
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Delete related models marked as to be deleted
-     * @throws Exception
-     */
-    public function afterDelete()
-    {
-        /** @var BaseActiveRecord $modelToDelete */
-        foreach ($this->_relationsToDelete as $modelToDelete) {
-            try {
-                if (!$modelToDelete->delete()) {
-                    throw new DbException('Could not delete the related record: ' . $modelToDelete::className() . '(' . VarDumper::dumpAsString($modelToDelete->primaryKey) . ')');
-                }
-            } catch (Exception $e) {
-                Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
-                $this->_rollback();
-                throw $e;
-            }
-        }
-    }
-
-    /**
-     * Return array of columns to save to the junction table for a related model having a many-to-many relation.
-     * @param string $relationName
-     * @param BaseActiveRecord $model
-     * @return array
-     * @throws \RuntimeException
-     */
-    private function _getJunctionTableColumns($relationName, $model)
-    {
-        $junctionTableColumns = [];
-        if (array_key_exists($relationName, $this->_relationsExtraColumns)) {
-            if (is_callable($this->_relationsExtraColumns[$relationName])) {
-                $junctionTableColumns = $this->_relationsExtraColumns[$relationName]($model);
-            } elseif (is_array($this->_relationsExtraColumns[$relationName])) {
-                $junctionTableColumns = $this->_relationsExtraColumns[$relationName];
-            }
-            if (!is_array($junctionTableColumns)) {
-                throw new RuntimeException(
-                    'Junction table columns definition must return an array, got ' . gettype($junctionTableColumns)
-                );
-            }
-        }
-        return $junctionTableColumns;
-    }
-
-    /**
-     * Compute the difference between two set of records using primary keys "tokens"
-     * If third parameter is set to true all initial related records will be marked for removal even if their
-     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
-     * @param BaseActiveRecord[] $initialRelations
-     * @param BaseActiveRecord[] $updatedRelations
-     * @param bool $forceSave
-     * @return array
-     */
-    private function _computePkDiff($initialRelations, $updatedRelations, $forceSave = false)
-    {
-        // Compute differences between initial relations and the current ones
-        $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
-            return implode('-', $model->getPrimaryKey(true));
-        });
-        $newPks = ArrayHelper::getColumn($updatedRelations, function (BaseActiveRecord $model) {
-            return implode('-', $model->getPrimaryKey(true));
-        });
-        if ($forceSave) {
-            $addedPks = $newPks;
-            $deletedPks = $oldPks;
-        } else {
-            $identicalPks = array_intersect($oldPks, $newPks);
-            $addedPks = array_values(array_diff($newPks, $identicalPks));
-            $deletedPks = array_values(array_diff($oldPks, $identicalPks));
-        }
-        return [$addedPks, $deletedPks];
-    }
-
-    /**
-     * Populates relations with input data
-     * @param array $data
-     */
-    public function loadRelations($data)
-    {
-        /** @var BaseActiveRecord $model */
-        $model = $this->owner;
-        foreach ($this->_relations as $relationName) {
-            /** @var ActiveQuery $relation */
-            $relation = $model->getRelation($relationName);
-            $modelClass = $relation->modelClass;
-            /** @var ActiveQuery $relationalModel */
-            $relationalModel = new $modelClass;
-            $formName = $relationalModel->formName();
-            if (array_key_exists($formName, $data)) {
-                $model->{$relationName} = $data[$formName];
             }
         }
     }
@@ -575,6 +582,60 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * Return array of columns to save to the junction table for a related model having a many-to-many relation.
+     * @param string $relationName
+     * @param BaseActiveRecord $model
+     * @return array
+     * @throws \RuntimeException
+     */
+    private function _getJunctionTableColumns($relationName, $model)
+    {
+        $junctionTableColumns = [];
+        if (array_key_exists($relationName, $this->_relationsExtraColumns)) {
+            if (is_callable($this->_relationsExtraColumns[$relationName])) {
+                $junctionTableColumns = $this->_relationsExtraColumns[$relationName]($model);
+            } elseif (is_array($this->_relationsExtraColumns[$relationName])) {
+                $junctionTableColumns = $this->_relationsExtraColumns[$relationName];
+            }
+            if (!is_array($junctionTableColumns)) {
+                throw new RuntimeException(
+                    'Junction table columns definition must return an array, got ' . gettype($junctionTableColumns)
+                );
+            }
+        }
+        return $junctionTableColumns;
+    }
+
+    /**
+     * Compute the difference between two set of records using primary keys "tokens"
+     * If third parameter is set to true all initial related records will be marked for removal even if their
+     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
+     * @param BaseActiveRecord[] $initialRelations
+     * @param BaseActiveRecord[] $updatedRelations
+     * @param bool $forceSave
+     * @return array
+     */
+    private function _computePkDiff($initialRelations, $updatedRelations, $forceSave = false)
+    {
+        // Compute differences between initial relations and the current ones
+        $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
+            return implode('-', $model->getPrimaryKey(true));
+        });
+        $newPks = ArrayHelper::getColumn($updatedRelations, function (BaseActiveRecord $model) {
+            return implode('-', $model->getPrimaryKey(true));
+        });
+        if ($forceSave) {
+            $addedPks = $newPks;
+            $deletedPks = $oldPks;
+        } else {
+            $identicalPks = array_intersect($oldPks, $newPks);
+            $addedPks = array_values(array_diff($newPks, $identicalPks));
+            $deletedPks = array_values(array_diff($oldPks, $identicalPks));
+        }
+        return [$addedPks, $deletedPks];
+    }
+
+    /**
      * @param $relationName
      * @throws \yii\base\InvalidCallException
      */
@@ -598,128 +659,63 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * @param BaseActiveRecord $model
-     * @param $relationName
+     * Get the list of owner model relations in order to be able to delete them after its deletion
      */
-    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName)
+    public function beforeDelete()
     {
-        /** @var BaseActiveRecord $relationModel */
-        foreach ($model->{$relationName} as $i => $relationModel) {
-            $this->validateRelationModel(self::prettyRelationName($relationName, $i), $relationName, $relationModel);
-        }
-    }
-
-    /**
-     * @param BaseActiveRecord $model
-     * @param ModelEvent $event
-     * @param $relationName
-     */
-    private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
-    {
-        /** @var ActiveQuery $relation */
-        $relation = $model->getRelation($relationName);
-        $relationModel = $model->{$relationName};
-        $p1 = $model->isPrimaryKey(array_keys($relation->link));
-        $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
-        if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
-            // Save Has one relation new record
-            $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $model->{$relationName});
-            if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
-                Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
-                $model->{$relationName}->save(false);
-            }
-        } else {
-            $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $relationModel);
-        }
-    }
-
-    /**
-     * @param BaseActiveRecord $model
-     */
-    protected function startTransactionForModel(BaseActiveRecord $model)
-    {
-        if ($this->isModelTransactional($model) && is_null($model->getDb()->transaction)) {
-            $this->_transaction = $model->getDb()->beginTransaction();
-        }
-    }
-
-
-    /**
-     * @param BaseActiveRecord $model
-     * @return bool
-     */
-    protected function isModelTransactional(BaseActiveRecord $model)
-    {
-        if (method_exists($model, 'isTransactional')) {
-            return ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-                || $model->isTransactional($model::OP_ALL);
-        }
-        return false;
-    }
-
-    /**
-     * Load existing model or create one if no key was provided and data is not empty
-     * @param $data
-     * @param $fks
-     * @param $modelClass
-     * @return BaseActiveRecord
-     */
-    private function _loadOrCreateRelationModel($data, $fks, $modelClass)
-    {
-        /** @var BaseActiveRecord $relationModel */
-        $relationModel = null;
-        if (!empty($fks)) {
-            $relationModel = $modelClass::findOne($fks);
-        }
-        if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = new $modelClass;
-        }
-        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
-            $relationModel->setAttributes($data);
-        }
-        return $relationModel;
-    }
-
-    /**
-     * Get the related model foreign keys
-     * @param $data
-     * @param $relation
-     * @param BaseActiveRecord $modelClass
-     * @return array
-     */
-    private function _getRelatedFks($data, $relation, $modelClass)
-    {
-        $fks = [];
-        if (is_array($data)) {
-            // search PK
-            foreach ($modelClass::primaryKey() as $modelAttribute) {
-                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
-                    $fks[$modelAttribute] = $data[$modelAttribute];
-                } else {
-                    $fks = [];
-                    break;
-                }
-            }
-            if (empty($fks)) {
-                // Get the right link definition
-                if ($relation->via instanceof BaseActiveRecord) {
-                    $link = $relation->via->link;
-                } elseif (is_array($relation->via)) {
-                    list($viaName, $viaQuery) = $relation->via;
-                    $link = $viaQuery->link;
-                } else {
-                    $link = $relation->link;
-                }
-                foreach ($link as $relatedAttribute => $modelAttribute) {
-                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
-                        $fks[$modelAttribute] = $data[$modelAttribute];
+        $model = $this->owner;
+        foreach ($this->_relationsCascadeDelete as $relationName => $params) {
+            if ($params === true) {
+                $relation = $model->getRelation($relationName);
+                if (!empty($model->{$relationName})) {
+                    if ($relation->multiple === true) { // Has many relation
+                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $model->{$relationName});
+                    } else {
+                        $this->_relationsToDelete[] = $model->{$relationName};
                     }
                 }
             }
-        } else {
-            $fks = $data;
         }
-        return $fks;
+    }
+
+    /**
+     * Delete related models marked as to be deleted
+     * @throws Exception
+     */
+    public function afterDelete()
+    {
+        /** @var BaseActiveRecord $modelToDelete */
+        foreach ($this->_relationsToDelete as $modelToDelete) {
+            try {
+                if (!$modelToDelete->delete()) {
+                    throw new DbException('Could not delete the related record: ' . $modelToDelete::className() . '(' . VarDumper::dumpAsString($modelToDelete->primaryKey) . ')');
+                }
+            } catch (Exception $e) {
+                Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
+                $this->_rollback();
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * Populates relations with input data
+     * @param array $data
+     */
+    public function loadRelations($data)
+    {
+        /** @var BaseActiveRecord $model */
+        $model = $this->owner;
+        foreach ($this->_relations as $relationName) {
+            /** @var ActiveQuery $relation */
+            $relation = $model->getRelation($relationName);
+            $modelClass = $relation->modelClass;
+            /** @var ActiveQuery $relationalModel */
+            $relationalModel = new $modelClass;
+            $formName = $relationalModel->formName();
+            if (array_key_exists($formName, $data)) {
+                $model->{$relationName} = $data[$formName];
+            }
+        }
     }
 }

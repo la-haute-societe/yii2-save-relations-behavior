@@ -59,6 +59,7 @@ class Project extends \yii\db\ActiveRecord
                 'relations' => [
                     'company',
                     'users',
+                    'projectLinks' => ['cascadeDelete' => true],
                     'tags'  => [
                         'extraColumns' => function ($model) {
                             /** @var $model Tag */
@@ -104,6 +105,14 @@ class Project extends \yii\db\ActiveRecord
     public function getUsers()
     {
         return $this->hasMany(User::className(), ['id' => 'user_id'])->via('ProjectUsers');
+    }
+    
+    /**
+     * @return ActiveQuery
+     */
+    public function getProjectLinks()
+    {
+        return $this->hasMany(ProjectLink::className(), ['project_id' => 'id']);
     }
 
     /**
