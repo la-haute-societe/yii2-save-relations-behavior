@@ -665,6 +665,7 @@ class SaveRelationsBehavior extends Behavior
         $owner = $this->owner;
         foreach ($this->_relationsCascadeDelete as $relationName => $params) {
             if ($params === true) {
+                /** @var ActiveQuery $relation */
                 $relation = $owner->getRelation($relationName);
                 if (!empty($owner->{$relationName})) {
                     if ($relation->multiple === true) { // Has many relation
