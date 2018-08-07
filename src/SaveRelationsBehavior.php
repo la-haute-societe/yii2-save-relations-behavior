@@ -380,8 +380,6 @@ class SaveRelationsBehavior extends Behavior
      */
     private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
     {
-        /** @var ActiveQuery $relation */
-        $relation = $model->getRelation($relationName);
         $relationModel = $model->{$relationName};
         $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $model->{$relationName});
         if ($relationModel->getIsNewRecord()) {
@@ -663,15 +661,16 @@ class SaveRelationsBehavior extends Behavior
      */
     public function beforeDelete()
     {
-        $model = $this->owner;
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
         foreach ($this->_relationsCascadeDelete as $relationName => $params) {
             if ($params === true) {
-                $relation = $model->getRelation($relationName);
-                if (!empty($model->{$relationName})) {
+                $relation = $owner->getRelation($relationName);
+                if (!empty($owner->{$relationName})) {
                     if ($relation->multiple === true) { // Has many relation
-                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $model->{$relationName});
+                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $owner->{$relationName});
                     } else {
-                        $this->_relationsToDelete[] = $model->{$relationName};
+                        $this->_relationsToDelete[] = $owner->{$relationName};
                     }
                 }
             }
@@ -704,17 +703,17 @@ class SaveRelationsBehavior extends Behavior
      */
     public function loadRelations($data)
     {
-        /** @var BaseActiveRecord $model */
-        $model = $this->owner;
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
         foreach ($this->_relations as $relationName) {
             /** @var ActiveQuery $relation */
-            $relation = $model->getRelation($relationName);
+            $relation = $owner->getRelation($relationName);
             $modelClass = $relation->modelClass;
             /** @var ActiveQuery $relationalModel */
             $relationalModel = new $modelClass;
             $formName = $relationalModel->formName();
             if (array_key_exists($formName, $data)) {
-                $model->{$relationName} = $data[$formName];
+                $owner->{$relationName} = $data[$formName];
             }
         }
     }
