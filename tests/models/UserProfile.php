@@ -7,6 +7,8 @@ use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
 class UserProfile extends \yii\db\ActiveRecord
 {
 
+    public $agree;
+
     /**
      * @inheritdoc
      */
@@ -37,7 +39,8 @@ class UserProfile extends \yii\db\ActiveRecord
             [['user_id'], 'integer'],
             ['bio', 'required'],
             [['user_id'], 'unique'],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']]
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['agree'], 'required', 'on' => 'insert'],
         ];
     }
 

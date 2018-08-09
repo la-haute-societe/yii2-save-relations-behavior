@@ -650,6 +650,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($project->save(), 'Project could not be saved');
     }
 
+    public function testFailToSetScenarioForUnkownRelation()
+    {
+        $this->setExpectedException('\yii\base\InvalidArgumentException');
+        $user = new User();
+        $user->setRelationScenario('wrongNameRelation', 'insert');
+    }
+
+
     public function testSaveHasOneWithPrimaryKeyAsForeignKey()
     {
         $user = new User();
@@ -657,11 +665,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $user->company = [
             'name' => 'ACME'
         ];
+        $user->setRelationScenario('userProfile', 'insert');
         $user->userProfile = [
-            'bio' => "Some great bio"
+            'bio'   => "Some great bio",
+            'agree' => 1
         ];
-        $this->assertTrue($user->save(), 'User could not be saved');
-        $this->assertEquals($user->userProfile->bio, "Some great bio");
+        $this->assertEquals(1, $user->userProfile->agree, 'User could not be saved' . VarDumper::dumpAsString($user->errors));
+        $this->assertTrue($user->save(), 'User could not be saved' . VarDumper::dumpAsString($user->errors));
+        $this->assertEquals("Some great bio", $user->userProfile->bio);
         $this->assertEquals($user->id, $user->userProfile->user_id);
     }
 

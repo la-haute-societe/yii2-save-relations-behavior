@@ -7,6 +7,7 @@ use Yii;
 use yii\base\Behavior;
 use yii\base\Component;
 use yii\base\Exception;
+use yii\base\InvalidArgumentException;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
 use yii\db\ActiveQuery;
@@ -62,8 +63,6 @@ class SaveRelationsBehavior extends Behavior
             }
         }
     }
-
-    //private $_relationsCascadeDelete = []; //TODO
 
     /**
      * @inheritdoc
@@ -169,7 +168,7 @@ class SaveRelationsBehavior extends Behavior
                 $newRelations[] = $entry;
             } else {
                 // TODO handle this with one DB request to retrieve all models
-                $newRelations[] = $this->processModelAsArray($entry, $relation);
+                $newRelations[] = $this->processModelAsArray($entry, $relation, $name);
             }
         }
         $this->_newRelationValue[$name] = $newRelations;
@@ -183,12 +182,12 @@ class SaveRelationsBehavior extends Behavior
      * @param \yii\db\ActiveQuery $relation
      * @return BaseActiveRecord
      */
-    protected function processModelAsArray($data, $relation)
+    protected function processModelAsArray($data, $relation, $name)
     {
         /** @var BaseActiveRecord $modelClass */
         $modelClass = $relation->modelClass;
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
-        return $this->_loadOrCreateRelationModel($data, $fks, $modelClass);
+        return $this->_loadOrCreateRelationModel($data, $fks, $modelClass, $name);
     }
 
     /**
@@ -238,9 +237,10 @@ class SaveRelationsBehavior extends Behavior
      * @param $data
      * @param $fks
      * @param $modelClass
+     * @param $relationName
      * @return BaseActiveRecord
      */
-    private function _loadOrCreateRelationModel($data, $fks, $modelClass)
+    private function _loadOrCreateRelationModel($data, $fks, $modelClass, $relationName)
     {
 
         /** @var BaseActiveRecord $relationModel */
@@ -250,6 +250,9 @@ class SaveRelationsBehavior extends Behavior
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
             $relationModel = new $modelClass;
+            if (array_key_exists($relationName, $this->_relationsScenario)) {
+                $relationModel->setScenario($this->_relationsScenario[$relationName]);
+            }
         }
         if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
             $relationModel->setAttributes($data);
@@ -270,7 +273,7 @@ class SaveRelationsBehavior extends Behavior
         /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($name);
         if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation);
+            $value = $this->processModelAsArray($value, $relation, $name);
         }
         $this->_newRelationValue[$name] = $value;
         $owner->populateRelation($name, $value);
@@ -402,9 +405,6 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $model */
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
-            if (array_key_exists($relationName, $this->_relationsScenario)) {
-                $relationModel->setScenario($this->_relationsScenario[$relationName]);
-            }
             Yii::debug("Validating {$prettyRelationName} relation model using " . $relationModel->scenario . ' scenario', __METHOD__);
             if (!$relationModel->validate()) {
                 $this->_addError($relationModel, $model, $relationName, $prettyRelationName);
@@ -717,5 +717,24 @@ class SaveRelationsBehavior extends Behavior
                 $owner->{$relationName} = $data[$formName];
             }
         }
+    }
+
+    /**
+     * Set the scenario for a given relation
+     * @param $relationName
+     * @param $scenario
+     * @throws InvalidArgumentException
+     */
+    public function setRelationScenario($relationName, $scenario)
+    {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        $relation = $owner->getRelation($relationName, false);
+        if (in_array($relationName, $this->_relations) && !is_null($relation)) {
+            $this->_relationsScenario[$relationName] = $scenario;
+        } else {
+            throw new InvalidArgumentException('Unknown ' . $relationName . ' relation');
+        }
+
     }
 }
