@@ -426,8 +426,9 @@ class SaveRelationsBehavior extends Behavior
      */
     private function _addError($relationModel, $owner, $relationName, $prettyRelationName)
     {
-        foreach ($relationModel->errors as $attributeErrors) {
+        foreach ($relationModel->errors as $attribute => $attributeErrors) {
             foreach ($attributeErrors as $error) {
+                $owner->addError("{$relationName}[{$attribute}][]", "{$prettyRelationName}: {$error}");
                 $owner->addError($relationName, "{$prettyRelationName}: {$error}");
             }
         }
