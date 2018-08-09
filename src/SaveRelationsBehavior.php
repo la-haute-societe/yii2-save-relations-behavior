@@ -72,10 +72,10 @@ class SaveRelationsBehavior extends Behavior
     {
         return [
             BaseActiveRecord::EVENT_BEFORE_VALIDATE => 'beforeValidate',
-            BaseActiveRecord::EVENT_AFTER_INSERT    => 'afterSave',
-            BaseActiveRecord::EVENT_AFTER_UPDATE    => 'afterSave',
-            BaseActiveRecord::EVENT_BEFORE_DELETE   => 'beforeDelete',
-            BaseActiveRecord::EVENT_AFTER_DELETE    => 'afterDelete'
+            BaseActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
+            BaseActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+            BaseActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
+            BaseActiveRecord::EVENT_AFTER_DELETE => 'afterDelete',
         ];
     }
 
@@ -146,7 +146,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Set the named multiple relation with the given value
-     * @param $name
+     * @param string $name
      * @param $value
      * @throws \yii\base\InvalidArgumentException
      */
@@ -169,7 +169,7 @@ class SaveRelationsBehavior extends Behavior
                 $newRelations[] = $entry;
             } else {
                 // TODO handle this with one DB request to retrieve all models
-                $newRelations[] = $this->processModelAsArray($entry, $relation);
+                $newRelations[] = $this->processModelAsArray($entry, $name);
             }
         }
         $this->_newRelationValue[$name] = $newRelations;
@@ -180,15 +180,16 @@ class SaveRelationsBehavior extends Behavior
      * Get a BaseActiveRecord model using the given $data parameter.
      * $data could either be a model ID or an associative array representing model attributes => values
      * @param mixed $data
-     * @param \yii\db\ActiveQuery $relation
+     * @param string $relationName
      * @return BaseActiveRecord
      */
-    protected function processModelAsArray($data, $relation)
+    protected function processModelAsArray($data, $relationName)
     {
+        $relation = $this->owner->getRelation($relationName);
         /** @var BaseActiveRecord $modelClass */
         $modelClass = $relation->modelClass;
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
-        return $this->_loadOrCreateRelationModel($data, $fks, $modelClass);
+        return $this->_loadOrCreateRelationModel($data, $fks, $relationName);
     }
 
     /**
@@ -235,14 +236,15 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Load existing model or create one if no key was provided and data is not empty
-     * @param $data
-     * @param $fks
-     * @param $modelClass
+     * @param array $data
+     * @param mixed $fks
+     * @param string $relationName
      * @return BaseActiveRecord
      */
-    private function _loadOrCreateRelationModel($data, $fks, $modelClass)
+    private function _loadOrCreateRelationModel($data, $fks, $relationName)
     {
-
+        $relation = $this->owner->getRelation($relationName);
+        $modelClass = $relation->modelClass;
         /** @var BaseActiveRecord $relationModel */
         $relationModel = null;
         if (!empty($fks)) {
@@ -252,6 +254,9 @@ class SaveRelationsBehavior extends Behavior
             $relationModel = new $modelClass;
         }
         if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
+            if (isset($this->_relationsScenario[$relationName])) {
+                $relationModel->setScenario($this->_relationsScenario[$relationName]);
+            }
             $relationModel->setAttributes($data);
         }
         return $relationModel;
@@ -259,7 +264,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Set the named single relation with the given value
-     * @param $name
+     * @param string $name
      * @param $value
      * @throws \yii\base\InvalidArgumentException
      */
@@ -270,7 +275,7 @@ class SaveRelationsBehavior extends Behavior
         /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($name);
         if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation);
+            $value = $this->processModelAsArray($value, $name);
         }
         $this->_newRelationValue[$name] = $value;
         $owner->populateRelation($name, $value);
@@ -291,7 +296,8 @@ class SaveRelationsBehavior extends Behavior
             if ($this->saveRelatedRecords($model, $event)) {
                 // If relation is has_one, try to set related model attributes
                 foreach ($this->_relations as $relationName) {
-                    if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                    if (array_key_exists($relationName,
+                        $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         /** @var ActiveQuery $relation */
                         $relation = $model->getRelation($relationName);
                         if ($relation->multiple === false && !empty($model->{$relationName})) {
@@ -340,7 +346,8 @@ class SaveRelationsBehavior extends Behavior
                 throw new Exception('One of the related model could not be validated');
             }
         } catch (Exception $e) {
-            Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
+            Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(),
+                __METHOD__);
             $this->_rollback();
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
@@ -405,7 +412,8 @@ class SaveRelationsBehavior extends Behavior
             if (array_key_exists($relationName, $this->_relationsScenario)) {
                 $relationModel->setScenario($this->_relationsScenario[$relationName]);
             }
-            Yii::debug("Validating {$prettyRelationName} relation model using " . $relationModel->scenario . ' scenario', __METHOD__);
+            Yii::debug("Validating {$prettyRelationName} relation model using " . $relationModel->scenario . ' scenario',
+                __METHOD__);
             if (!$relationModel->validate()) {
                 $this->_addError($relationModel, $model, $relationName, $prettyRelationName);
             }
@@ -481,7 +489,8 @@ class SaveRelationsBehavior extends Behavior
             }
             try {
                 foreach ($this->_relations as $relationName) {
-                    if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
+                    if (array_key_exists($relationName,
+                        $this->_oldRelationValue)) { // Relation was not set, do nothing...
                         Yii::debug("Linking {$relationName} relation", __METHOD__);
                         /** @var ActiveQuery $relation */
                         $relation = $owner->getRelation($relationName);
@@ -494,7 +503,8 @@ class SaveRelationsBehavior extends Behavior
                     }
                 }
             } catch (Exception $e) {
-                Yii::warning(get_class($e) . ' was thrown while saving related records during afterSave event: ' . $e->getMessage(), __METHOD__);
+                Yii::warning(get_class($e) . ' was thrown while saving related records during afterSave event: ' . $e->getMessage(),
+                    __METHOD__);
                 $this->_rollback();
                 /***
                  * Sadly mandatory because the error occurred during afterSave event
@@ -530,8 +540,10 @@ class SaveRelationsBehavior extends Behavior
                     if ($relationModel->validate()) {
                         $relationModel->save();
                     } else {
-                        $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName, $i));
-                        throw new DbException('Related record ' . self::prettyRelationName($relationName, $i) . ' could not be saved.');
+                        $this->_addError($relationModel, $owner, $relationName,
+                            self::prettyRelationName($relationName, $i));
+                        throw new DbException('Related record ' . self::prettyRelationName($relationName,
+                                $i) . ' could not be saved.');
                     }
                 }
                 $junctionTableColumns = $this->_getJunctionTableColumns($relationName, $relationModel);
@@ -558,9 +570,10 @@ class SaveRelationsBehavior extends Behavior
         );
 
         // Deleted relations
-        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName], function (BaseActiveRecord $model) {
-            return implode('-', $model->getPrimaryKey(true));
-        });
+        $initialModels = ArrayHelper::index($this->_oldRelationValue[$relationName],
+            function (BaseActiveRecord $model) {
+                return implode('-', $model->getPrimaryKey(true));
+            });
         $initialRelations = $owner->{$relationName};
         foreach ($deletedPks as $key) {
             $owner->unlink($relationName, $initialModels[$key], true);
@@ -669,7 +682,8 @@ class SaveRelationsBehavior extends Behavior
                 $relation = $owner->getRelation($relationName);
                 if (!empty($owner->{$relationName})) {
                     if ($relation->multiple === true) { // Has many relation
-                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete, $owner->{$relationName});
+                        $this->_relationsToDelete = ArrayHelper::merge($this->_relationsToDelete,
+                            $owner->{$relationName});
                     } else {
                         $this->_relationsToDelete[] = $owner->{$relationName};
                     }
@@ -691,7 +705,8 @@ class SaveRelationsBehavior extends Behavior
                     throw new DbException('Could not delete the related record: ' . $modelToDelete::className() . '(' . VarDumper::dumpAsString($modelToDelete->primaryKey) . ')');
                 }
             } catch (Exception $e) {
-                Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
+                Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(),
+                    __METHOD__);
                 $this->_rollback();
                 throw $e;
             }
