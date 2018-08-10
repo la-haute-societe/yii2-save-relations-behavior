@@ -2,7 +2,7 @@
 
 ## [1.5.2]
 ### Fixed
-- Fix a regression in Has One saving introduced by #33 fix.
+- Fix a regression in Has One saving introduced by #30 fix.
 
 ## [1.5.1]
 ### Fixed
