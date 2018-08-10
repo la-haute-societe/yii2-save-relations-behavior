@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.5.2]
+### Fixed
+- Fix a regression in Has One saving introduced by #33 fix.
+
 ## [1.5.1]
 ### Fixed
 - Bug #33: Custom relation scenario was set too late and was preventing attributes from being correctly set (thx @phrakon)

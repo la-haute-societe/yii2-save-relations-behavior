@@ -296,16 +296,7 @@ class SaveRelationsBehavior extends Behavior
                 // If relation is has_one, try to set related model attributes
                 foreach ($this->_relations as $relationName) {
                     if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
-                        /** @var ActiveQuery $relation */
-                        $relation = $model->getRelation($relationName);
-                        if ($relation->multiple === false && !empty($model->{$relationName})) {
-                            Yii::debug("Setting foreign keys for {$relationName}", __METHOD__);
-                            foreach ($relation->link as $relatedAttribute => $modelAttribute) {
-                                if ($model->{$modelAttribute} !== $model->{$relationName}->{$relatedAttribute}) {
-                                    $model->{$modelAttribute} = $model->{$relationName}->{$relatedAttribute};
-                                }
-                            }
-                        }
+                        $this->_setRelationForeignKeys($relationName);
                     }
                 }
             }
@@ -384,9 +375,13 @@ class SaveRelationsBehavior extends Behavior
      */
     private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
     {
+        Yii::debug("_prepareHasOneRelation for {$relationName}", __METHOD__);
         $relationModel = $model->{$relationName};
         $this->validateRelationModel(self::prettyRelationName($relationName), $relationName, $model->{$relationName});
-        if ($relationModel->getIsNewRecord()) {
+        $relation = $model->getRelation($relationName);
+        $p1 = $model->isPrimaryKey(array_keys($relation->link));
+        $p2 = $relationModel::isPrimaryKey(array_values($relation->link));
+        if ($relationModel->getIsNewRecord() && $p1 && !$p2) {
             // Save Has one relation new record
             if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
                 Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
@@ -461,6 +456,29 @@ class SaveRelationsBehavior extends Behavior
         if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
             $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
             Yii::info('Rolling back', __METHOD__);
+        }
+    }
+
+    /**
+     * Set relation foreign keys that point to owner primary key
+     * @param $relationName
+     */
+    protected function _setRelationForeignKeys($relationName)
+    {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        /** @var ActiveQuery $relation */
+        $relation = $owner->getRelation($relationName);
+        if ($relation->multiple === false && !empty($owner->{$relationName})) {
+            Yii::debug("Setting foreign keys for {$relationName}", __METHOD__);
+            foreach ($relation->link as $relatedAttribute => $modelAttribute) {
+                if ($owner->{$modelAttribute} !== $owner->{$relationName}->{$relatedAttribute}) {
+                    if ($owner->{$relationName}->isNewRecord) {
+                        $owner->{$relationName}->save();
+                    }
+                    $owner->{$modelAttribute} = $owner->{$relationName}->{$relatedAttribute};
+                }
+            }
         }
     }
 
@@ -642,7 +660,6 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
-
         if ($this->_oldRelationValue[$relationName] !== $owner->{$relationName}) {
             if ($owner->{$relationName} instanceof BaseActiveRecord) {
                 $owner->link($relationName, $owner->{$relationName});

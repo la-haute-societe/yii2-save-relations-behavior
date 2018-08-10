@@ -689,7 +689,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $profile->loadRelations($data);
         $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
         $this->assertTrue($profile->user->isNewRecord, "User should be a new record");
-        $profile->save();
+        $this->assertEquals(1, $profile->user_id);
         $this->assertTrue($profile->save(), 'Profile could not be saved');
         $this->assertEquals('Someone Else', $profile->user->username, "User name should be 'Someone Else'");
     }
