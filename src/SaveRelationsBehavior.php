@@ -145,16 +145,16 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Set the named multiple relation with the given value
-     * @param $name
+     * @param string $relationName
      * @param $value
      * @throws \yii\base\InvalidArgumentException
      */
-    protected function setMultipleRelation($name, $value)
+    protected function setMultipleRelation($relationName, $value)
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         /** @var ActiveQuery $relation */
-        $relation = $owner->getRelation($name);
+        $relation = $owner->getRelation($relationName);
         $newRelations = [];
         if (!is_array($value)) {
             if (!empty($value)) {
@@ -168,11 +168,11 @@ class SaveRelationsBehavior extends Behavior
                 $newRelations[] = $entry;
             } else {
                 // TODO handle this with one DB request to retrieve all models
-                $newRelations[] = $this->processModelAsArray($entry, $relation, $name);
+                $newRelations[] = $this->processModelAsArray($entry, $relation, $relationName);
             }
         }
-        $this->_newRelationValue[$name] = $newRelations;
-        $owner->populateRelation($name, $newRelations);
+        $this->_newRelationValue[$relationName] = $newRelations;
+        $owner->populateRelation($relationName, $newRelations);
     }
 
     /**
@@ -250,9 +250,10 @@ class SaveRelationsBehavior extends Behavior
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
             $relationModel = new $modelClass;
-            if (array_key_exists($relationName, $this->_relationsScenario)) {
-                $relationModel->setScenario($this->_relationsScenario[$relationName]);
-            }
+        }
+        // If a custom scenario is set, apply it here to correctly be able to set the model attributes
+        if (array_key_exists($relationName, $this->_relationsScenario)) {
+            $relationModel->setScenario($this->_relationsScenario[$relationName]);
         }
         if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
             $relationModel->setAttributes($data);
@@ -262,21 +263,21 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Set the named single relation with the given value
-     * @param $name
+     * @param string $relationName
      * @param $value
      * @throws \yii\base\InvalidArgumentException
      */
-    protected function setSingleRelation($name, $value)
+    protected function setSingleRelation($relationName, $value)
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         /** @var ActiveQuery $relation */
-        $relation = $owner->getRelation($name);
+        $relation = $owner->getRelation($relationName);
         if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation, $name);
+            $value = $this->processModelAsArray($value, $relation, $relationName);
         }
-        $this->_newRelationValue[$name] = $value;
-        $owner->populateRelation($name, $value);
+        $this->_newRelationValue[$relationName] = $value;
+        $owner->populateRelation($relationName, $value);
     }
 
     /**
@@ -415,14 +416,14 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Attach errors to owner relational attributes
-     * @param $relationModel
-     * @param $owner
-     * @param $relationName
-     * @param $prettyRelationName
+     * @param BaseActiveRecord $relationModel
+     * @param BaseActiveRecord $owner
+     * @param string $relationName
+     * @param string $prettyRelationName
      */
     private function _addError($relationModel, $owner, $relationName, $prettyRelationName)
     {
-        foreach ($relationModel->errors as $attributeErrors) {
+        foreach ($relationModel->errors as $attribute => $attributeErrors) {
             foreach ($attributeErrors as $error) {
                 $owner->addError($relationName, "{$prettyRelationName}: {$error}");
             }
