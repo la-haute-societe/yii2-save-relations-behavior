@@ -1,5 +1,28 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.5.1]
+### Fixed
+- Bug #33: Custom relation scenario was set too late and was preventing attributes from being correctly set (thx @phrakon)
+
+## Added
+- New method `setRelationScenario` can set a relation scenario at runtime
+
+## Changed
+- Light refactoring
+- Updated documentation
+
+## [1.5.0]
+### Added
+- Enh #5: Ability to automaticaly delete related records along with the main model
+
+### Fixed
+- Bug #30: HasOne relation saving issue (thx @phrakon)
+- Fix for SaveRelationTrait (thx @leandrogehlen)
+
+### Changed
+- Some code refactoring
+- Yii2 requirements raised to 2.0.14
+
 ## [1.4.1]
 ### Fixed
 - Bug #24: Fix a regression introduced in 1.4.0 release where validation of hasOne relations was not triggered. (thx @dabkhazi)

@@ -204,6 +204,13 @@ For instance, in the following configuration, the `links ` related records will 
     }  
 ...
 ```
+
+It is also possible to set a relation scenario at runtime using the `setRelationScenario` as follow:
+
+```php
+$model->setRelationScenario('relationName', 'scenarioName');
+```
+
 > **Tips:**
 > For relations not involving a junction table by using the `via()` or `viaTable()` methods, you should remove the attributes pointing to the owner model from the 'required' validation rules to be able to pass the validations.
 
