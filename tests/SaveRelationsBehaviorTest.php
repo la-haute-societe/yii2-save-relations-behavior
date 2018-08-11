@@ -482,15 +482,21 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
                     'language' => 'fr',
                     'name'     => 'yii',
                     'link'     => 'http://www.yiiframework.fr'
+                ],
+                [
+                    'language' => 'en',
+                    'name' => 'mac_os_x',
+                    'link' => 'http://www.apple.com/osx/updated'
                 ]
             ]
         ];
         $project->loadRelations($data);
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
-        $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
-        $this->assertEquals($project->links[0]->link, 'http://www.yiiframework.com');
-        $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.fr');
+        $this->assertCount(3, $project->projectLinks, "Project should have 2 links");
+        $this->assertEquals($project->links[0]->link, 'http://www.apple.com/osx/updated');
+        $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.com');
+        $this->assertEquals($project->links[2]->link, 'http://www.yiiframework.fr');
     }
 
     public function testAssignSingleObjectToHasManyRelationShouldSucceed()

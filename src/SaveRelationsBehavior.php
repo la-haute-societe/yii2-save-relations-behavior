@@ -647,27 +647,34 @@ class SaveRelationsBehavior extends Behavior
     {
         $fks = [];
         if (is_array($data)) {
+            // Get the right link definition
+            if ($relation->via instanceof BaseActiveRecord) {
+                $link = $relation->via->link;
+            } elseif (is_array($relation->via)) {
+                list($viaName, $viaQuery) = $relation->via;
+                $link = $viaQuery->link;
+            } else {
+                $link = $relation->link;
+            }
+
             // search PK
             foreach ($modelClass::primaryKey() as $modelAttribute) {
-                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                if (isset($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
+                } elseif (!$relation->via) {
+                    foreach ($link as $relatedAttribute => $modelAttribute) {
+                        if (!isset($data[$modelAttribute])) {
+                            $fks[$relatedAttribute] = $this->owner->{$modelAttribute};
+                        }
+                    }
                 } else {
                     $fks = [];
                     break;
                 }
             }
             if (empty($fks)) {
-                // Get the right link definition
-                if ($relation->via instanceof BaseActiveRecord) {
-                    $link = $relation->via->link;
-                } elseif (is_array($relation->via)) {
-                    list($viaName, $viaQuery) = $relation->via;
-                    $link = $viaQuery->link;
-                } else {
-                    $link = $relation->link;
-                }
                 foreach ($link as $relatedAttribute => $modelAttribute) {
-                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                    if (isset($data[$modelAttribute])) {
                         $fks[$modelAttribute] = $data[$modelAttribute];
                     }
                 }
