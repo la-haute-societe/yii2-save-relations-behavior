@@ -501,7 +501,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $project->loadRelations($data);
         $this->assertTrue($project->save(), 'Project could not be saved');
         $this->assertEquals('YiiSoft', $project->company->name, "Company name should be YiiSoft");
-        $this->assertCount(3, $project->projectLinks, "Project should have 2 links");
+        $this->assertCount(3, $project->projectLinks, "Project should have 3 links");
         $this->assertEquals($project->links[0]->link, 'http://www.apple.com/osx/updated');
         $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.com');
         $this->assertEquals($project->links[2]->link, 'http://www.yiiframework.fr');
