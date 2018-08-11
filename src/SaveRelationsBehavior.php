@@ -214,9 +214,9 @@ class SaveRelationsBehavior extends Behavior
             foreach ($modelClass::primaryKey() as $modelAttribute) {
                 if (isset($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
-                } elseif (!$relation->via && $relation->multiple) {
+                } elseif ($relation->multiple && !$relation->via) {
                     foreach ($link as $relatedAttribute => $modelAttribute) {
-                        if (!isset($data[$modelAttribute])) {
+                        if (!isset($data[$relatedAttribute])) {
                             $fks[$relatedAttribute] = $this->owner->{$modelAttribute};
                         }
                     }
@@ -632,7 +632,7 @@ class SaveRelationsBehavior extends Behavior
     /**
      * Compute the difference between two set of records using primary keys "tokens"
      * If third parameter is set to true all initial related records will be marked for removal even if their
-     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
+     * properties did not change. This can be handy in a many-to-many relation_ involving a junction table.
      * @param BaseActiveRecord[] $initialRelations
      * @param BaseActiveRecord[] $updatedRelations
      * @param bool $forceSave
