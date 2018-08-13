@@ -841,4 +841,32 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($project->company->isNewRecord, 'Company record should be saved');
         $this->assertFalse($project->company->users[0]->isNewRecord, 'Company Users records should be saved');
     }
+
+
+    public function testLoadRelationNameAsDataKeyShouldSucceed()
+    {
+        $company = new Company([
+            'name' => 'NewSoft',
+        ]);
+
+        $company->attachBehavior('saveRelations', [
+            'class' => SaveRelationsBehavior::className(),
+            'relations' => ['users'],
+            'useFormNameAsKey' => false
+        ]);
+
+        $data = [
+            'users' => [
+                ['username' => "user1"],
+                ['username' => "user2"]
+            ]
+        ];
+
+        $company->loadRelations($data);
+
+        $this->assertTrue($company->save(), 'Company could not be saved');
+        $this->assertEquals('NewSoft', $company->name, 'Company\'s name is wrong');
+        $this->assertEquals('user1', $company->users[0]->username);
+        $this->assertEquals('user2', $company->users[1]->username);
+    }
 }
