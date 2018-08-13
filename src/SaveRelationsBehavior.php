@@ -215,9 +215,9 @@ class SaveRelationsBehavior extends Behavior
                 if (isset($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
                 } elseif ($relation->multiple && !$relation->via) {
-                    foreach ($link as $relatedAttribute => $modelAttribute) {
+                    foreach ($link as $relatedAttribute => $relatedModelAttribute) {
                         if (!isset($data[$relatedAttribute])) {
-                            $fks[$relatedAttribute] = $this->owner->{$modelAttribute};
+                            $fks[$relatedAttribute] = $this->owner->{$relatedModelAttribute};
                         }
                     }
                 } else {
