@@ -5,8 +5,6 @@ namespace tests\models;
 class ProjectContact extends \yii\db\ActiveRecord
 {
 
-    public $blockDelete = false;
-
     /**
      * @inheritdoc
      */
