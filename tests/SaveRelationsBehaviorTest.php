@@ -40,6 +40,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('project_tags')->execute();
         $db->createCommand()->dropTable('tags')->execute();
         $db->createCommand()->dropTable('project_link')->execute();
+        $db->createCommand()->dropTable('project_contact')->execute();
         $db->createCommand()->dropTable('dummy')->execute();
         parent::tearDown();
     }
@@ -120,6 +121,14 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
             'PRIMARY KEY(project_id, user_id)'
         ])->execute();
 
+        // Project Contact
+        $db->createCommand()->createTable('project_contact', [
+            'project_id' => $migration->integer()->notNull(),
+            'email'    => $migration->text()->notNull(),
+            'phone' => $migration->text(),
+            'PRIMARY KEY(project_id, email)'
+        ])->execute();
+
         // Dummy
         $db->createCommand()->createTable('dummy', [
             'id'        => $migration->primaryKey(),
@@ -168,6 +177,10 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->batchInsert('project_link', ['language', 'name', 'project_id'], [
             ['fr', 'mac_os_x', 1],
             ['en', 'mac_os_x', 1]
+        ])->execute();
+
+        $db->createCommand()->batchInsert('project_contact', ['email', 'phone', 'project_id'], [
+            ['admin@apple.com', '(123) 456–7890', 1]
         ])->execute();
 
         $db->createCommand()->batchInsert('project_user', ['project_id', 'user_id'], [
@@ -499,6 +512,30 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(2, $project->projectLinks, "Project should have 2 links");
         $this->assertEquals($project->links[0]->link, 'http://www.yiiframework.com');
         $this->assertEquals($project->links[1]->link, 'http://www.yiiframework.fr');
+    }
+
+    public function testLoadHasManyWithCompositeKeyShouldSucceed()
+    {
+        $project = Project::findOne(1);
+        $data = [
+            'ProjectContact' => [
+                [
+                    'email' => 'admin@apple.com',
+                    'phone' => '(999) 999–9999'
+                ],
+                [
+                    'email' => 'new@apple.com',
+                    'phone' => '(987) 654–3210'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertCount(2, $project->contacts, "Project should have 2 contacts");
+        $this->assertEquals($project->contacts[0]->phone, '(999) 999–9999');
+
+        $this->assertEquals($project->contacts[1]->email, 'new@apple.com');
+        $this->assertEquals($project->contacts[1]->phone, '(987) 654–3210');
     }
 
     public function testAssignSingleObjectToHasManyRelationShouldSucceed()

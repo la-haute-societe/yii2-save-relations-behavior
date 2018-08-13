@@ -201,27 +201,33 @@ class SaveRelationsBehavior extends Behavior
     {
         $fks = [];
         if (is_array($data)) {
+            // Get the right link definition
+            if ($relation->via instanceof BaseActiveRecord) {
+                $link = $relation->via->link;
+            } elseif (is_array($relation->via)) {
+                list($viaName, $viaQuery) = $relation->via;
+                $link = $viaQuery->link;
+            } else {
+                $link = $relation->link;
+            }
             // search PK
             foreach ($modelClass::primaryKey() as $modelAttribute) {
-                if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                if (isset($data[$modelAttribute])) {
                     $fks[$modelAttribute] = $data[$modelAttribute];
+                } elseif ($relation->multiple && !$relation->via) {
+                    foreach ($link as $relatedAttribute => $modelAttribute) {
+                        if (!isset($data[$relatedAttribute])) {
+                            $fks[$relatedAttribute] = $this->owner->{$modelAttribute};
+                        }
+                    }
                 } else {
                     $fks = [];
                     break;
                 }
             }
             if (empty($fks)) {
-                // Get the right link definition
-                if ($relation->via instanceof BaseActiveRecord) {
-                    $link = $relation->via->link;
-                } elseif (is_array($relation->via)) {
-                    list($viaName, $viaQuery) = $relation->via;
-                    $link = $viaQuery->link;
-                } else {
-                    $link = $relation->link;
-                }
                 foreach ($link as $relatedAttribute => $modelAttribute) {
-                    if (array_key_exists($modelAttribute, $data) && !empty($data[$modelAttribute])) {
+                    if (isset($data[$modelAttribute])) {
                         $fks[$modelAttribute] = $data[$modelAttribute];
                     }
                 }
@@ -626,7 +632,7 @@ class SaveRelationsBehavior extends Behavior
     /**
      * Compute the difference between two set of records using primary keys "tokens"
      * If third parameter is set to true all initial related records will be marked for removal even if their
-     * properties did not change. This can be handy in a many-to-many relation involving a junction table.
+     * properties did not change. This can be handy in a many-to-many relation_ involving a junction table.
      * @param BaseActiveRecord[] $initialRelations
      * @param BaseActiveRecord[] $updatedRelations
      * @param bool $forceSave
