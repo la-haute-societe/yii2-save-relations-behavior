@@ -27,7 +27,7 @@ class SaveRelationsBehavior extends Behavior
 {
 
     public $relations = [];
-    public $useFormNameAsKey = true;
+    public $useFormName = true;
 
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
@@ -737,7 +737,7 @@ class SaveRelationsBehavior extends Behavior
             $modelClass = $relation->modelClass;
             /** @var ActiveQuery $relationalModel */
             $relationalModel = new $modelClass;
-            $keyName = $this->useFormNameAsKey ? $relationalModel->formName() : $relationName;
+            $keyName = $this->useFormName ? $relationalModel->formName() : $relationName;
             if (array_key_exists($keyName, $data)) {
                 $owner->{$relationName} = $data[$keyName];
             }
