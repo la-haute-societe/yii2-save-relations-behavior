@@ -27,13 +27,14 @@ class SaveRelationsBehavior extends Behavior
 {
 
     public $relations = [];
+    public $useFormName = true;
+
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
     private $_newRelationValue = []; // Store update relations value
     private $_relationsToDelete = [];
     private $_relationsSaveStarted = false;
     private $_transaction;
-
 
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
@@ -736,9 +737,9 @@ class SaveRelationsBehavior extends Behavior
             $modelClass = $relation->modelClass;
             /** @var ActiveQuery $relationalModel */
             $relationalModel = new $modelClass;
-            $formName = $relationalModel->formName();
-            if (array_key_exists($formName, $data)) {
-                $owner->{$relationName} = $data[$formName];
+            $keyName = $this->useFormName ? $relationalModel->formName() : $relationName;
+            if (array_key_exists($keyName, $data)) {
+                $owner->{$relationName} = $data[$keyName];
             }
         }
     }
