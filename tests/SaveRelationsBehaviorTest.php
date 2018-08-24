@@ -884,9 +884,10 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $user->save();
         $this->assertFalse($transactional);
 
+        $user->autoStartTransaction = true;
         $user->username = 'Eric Schmidt';
         $user->save();
-        $this->assertFalse($transactional);
+        $this->assertTrue($transactional);
     }
 }
 
