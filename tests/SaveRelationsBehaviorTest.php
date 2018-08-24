@@ -14,9 +14,7 @@ use tests\models\Tag;
 use tests\models\User;
 use tests\models\UserProfile;
 use Yii;
-use yii\base\Behavior;
 use yii\base\Model;
-use yii\db\BaseActiveRecord;
 use yii\db\Migration;
 use yii\helpers\VarDumper;
 use yii\db\ActiveRecord;
@@ -873,47 +871,11 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $transactional;
         $user = User::findOne(1);
 
-        $user->attachBehavior('transactional', [
-            'class' => CallbackBehavior::className(),
-            'callback' => function($model) use (&$transactional) {
-                $transactional = $model->isTransactional(ActiveRecord::OP_UPDATE);
-            }
-        ]);
-
-        $user->username = 'Linus Torvalds';
-        $user->save();
+        $transactional = $user->isTransactional(ActiveRecord::OP_UPDATE);
         $this->assertFalse($transactional);
 
         $user->autoStartTransaction = true;
-        $user->username = 'Eric Schmidt';
-        $user->save();
+        $transactional = $user->isTransactional(ActiveRecord::OP_UPDATE);
         $this->assertTrue($transactional);
     }
-}
-
-class CallbackBehavior extends Behavior
-{
-    /**
-     * @var callable
-     */
-    public $callback;
-
-    /**
-     * @inheritdoc
-     */
-    public function events()
-    {
-        return [
-            BaseActiveRecord::EVENT_BEFORE_UPDATE=> 'beforeUpdate',
-        ];
-    }
-
-    /**
-     * Runs the callback property
-     */
-    public function beforeUpdate()
-    {
-        $result = call_user_func($this->callback, $this->owner);
-    }
-
 }
