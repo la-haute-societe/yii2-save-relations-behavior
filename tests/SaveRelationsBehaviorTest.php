@@ -19,6 +19,7 @@ use yii\base\Model;
 use yii\db\BaseActiveRecord;
 use yii\db\Migration;
 use yii\helpers\VarDumper;
+use yii\db\ActiveRecord;
 
 class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 {
@@ -869,13 +870,13 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 
     public function testAutoStartTransaction()
     {
-        $transactional = false;
+        $transactional;
         $user = User::findOne(1);
 
         $user->attachBehavior('transactional', [
-            'class' => BeforeUpdateBehavior::className(),
+            'class' => CallbackBehavior::className(),
             'callback' => function($model) use (&$transactional) {
-                $transactional = $model->getDb()->getTransaction() !== null;
+                $transactional = $model->isTransactional(ActiveRecord::OP_UPDATE);
             }
         ]);
 
@@ -883,14 +884,13 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $user->save();
         $this->assertFalse($transactional);
 
-        $user->autoStartTransaction = true;
-        $user->username = 'Steve Jobs';
+        $user->username = 'Eric Schmidt';
         $user->save();
-        $this->assertTrue($transactional);
+        $this->assertFalse($transactional);
     }
 }
 
-class BeforeUpdateBehavior extends Behavior
+class CallbackBehavior extends Behavior
 {
     /**
      * @var callable
@@ -903,7 +903,7 @@ class BeforeUpdateBehavior extends Behavior
     public function events()
     {
         return [
-            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'beforeUpdate',
+            BaseActiveRecord::EVENT_BEFORE_UPDATE=> 'beforeUpdate',
         ];
     }
 
