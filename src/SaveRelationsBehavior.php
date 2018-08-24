@@ -28,6 +28,7 @@ class SaveRelationsBehavior extends Behavior
 
     public $relations = [];
     public $useFormName = true;
+    public $autoStartTransaction = false;
 
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value

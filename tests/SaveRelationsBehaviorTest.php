@@ -14,7 +14,9 @@ use tests\models\Tag;
 use tests\models\User;
 use tests\models\UserProfile;
 use Yii;
+use yii\base\Behavior;
 use yii\base\Model;
+use yii\db\BaseActiveRecord;
 use yii\db\Migration;
 use yii\helpers\VarDumper;
 
@@ -846,13 +848,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     public function testLoadRelationNameAsDataKeyShouldSucceed()
     {
         $company = new Company([
-            'name' => 'NewSoft',
-        ]);
-
-        $company->attachBehavior('saveRelations', [
-            'class' => SaveRelationsBehavior::className(),
-            'relations' => ['users'],
-            'useFormName' => false
+            'useFormName' => false,
+            'name' => 'NewSoft'
         ]);
 
         $data = [
@@ -869,4 +866,53 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('user1', $company->users[0]->username);
         $this->assertEquals('user2', $company->users[1]->username);
     }
+
+    public function testAutoStartTransaction()
+    {
+        $transactional = false;
+        $user = User::findOne(1);
+
+        $user->attachBehavior('transactional', [
+            'class' => BeforeUpdateBehavior::className(),
+            'callback' => function($model) use (&$transactional) {
+                $transactional = $model->getDb()->getTransaction() !== null;
+            }
+        ]);
+
+        $user->username = 'Linus Torvalds';
+        $user->save();
+        $this->assertFalse($transactional);
+
+        $user->autoStartTransaction = true;
+        $user->username = 'Steve Jobs';
+        $user->save();
+        $this->assertTrue($transactional);
+    }
+}
+
+class BeforeUpdateBehavior extends Behavior
+{
+    /**
+     * @var callable
+     */
+    public $callback;
+
+    /**
+     * @inheritdoc
+     */
+    public function events()
+    {
+        return [
+            BaseActiveRecord::EVENT_BEFORE_UPDATE => 'beforeUpdate',
+        ];
+    }
+
+    /**
+     * Runs the callback property
+     */
+    public function beforeUpdate()
+    {
+        $result = call_user_func($this->callback, $this->owner);
+    }
+
 }

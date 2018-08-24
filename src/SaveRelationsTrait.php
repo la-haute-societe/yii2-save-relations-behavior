@@ -18,12 +18,12 @@ trait SaveRelationsTrait
     }
 
     /**
-     * Auto start transaction if model has relations
+     * Starts transaction if [autoStartTransaction] has been defined
      */
     public function isTransactional($operation)
     {
-        if ($this->hasProperty('relations')) {
-            return count($this->relations) > 0;
+        if ($this->hasProperty('autoStartTransaction')) {
+            return $this->autoStartTransaction;
         }
 
         return parent::isTransactional($operation);
