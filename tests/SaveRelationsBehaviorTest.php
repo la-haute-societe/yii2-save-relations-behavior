@@ -17,6 +17,7 @@ use Yii;
 use yii\base\Model;
 use yii\db\Migration;
 use yii\helpers\VarDumper;
+use yii\db\ActiveRecord;
 
 class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 {
@@ -846,13 +847,8 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
     public function testLoadRelationNameAsDataKeyShouldSucceed()
     {
         $company = new Company([
-            'name' => 'NewSoft',
-        ]);
-
-        $company->attachBehavior('saveRelations', [
-            'class' => SaveRelationsBehavior::className(),
-            'relations' => ['users'],
-            'useFormName' => false
+            'useFormName' => false,
+            'name' => 'NewSoft'
         ]);
 
         $data = [
@@ -868,5 +864,18 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('NewSoft', $company->name, 'Company\'s name is wrong');
         $this->assertEquals('user1', $company->users[0]->username);
         $this->assertEquals('user2', $company->users[1]->username);
+    }
+
+    public function testAutoStartTransaction()
+    {
+        $transactional;
+        $user = User::findOne(1);
+
+        $transactional = $user->isTransactional(ActiveRecord::OP_UPDATE);
+        $this->assertFalse($transactional);
+
+        $user->autoStartTransaction = true;
+        $transactional = $user->isTransactional(ActiveRecord::OP_UPDATE);
+        $this->assertTrue($transactional);
     }
 }
