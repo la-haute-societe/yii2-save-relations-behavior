@@ -324,7 +324,6 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
-        $this->startTransactionForModel($model);
         try {
             foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
@@ -344,36 +343,11 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
-            $this->_rollback();
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
             return false;
         }
         return true;
-    }
-
-    /**
-     * @param BaseActiveRecord $model
-     */
-    protected function startTransactionForModel(BaseActiveRecord $model)
-    {
-        if ($this->isModelTransactional($model) && is_null($model->getDb()->transaction)) {
-            $this->_transaction = $model->getDb()->beginTransaction();
-        }
-    }
-
-    /**
-     * @param BaseActiveRecord $model
-     * @return bool
-     */
-    protected function isModelTransactional(BaseActiveRecord $model)
-    {
-        if (method_exists($model, 'isTransactional')) {
-            return ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-                || $model->isTransactional($model::OP_ALL);
-        }
-        return false;
     }
 
     /**
@@ -456,18 +430,6 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Rollback transaction if any
-     * @throws DbException
-     */
-    private function _rollback()
-    {
-        if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-            Yii::info('Rolling back', __METHOD__);
-        }
-    }
-
-    /**
      * Set relation foreign keys that point to owner primary key
      * @param $relationName
      */
@@ -522,7 +484,6 @@ class SaveRelationsBehavior extends Behavior
                 }
             } catch (Exception $e) {
                 Yii::warning(get_class($e) . ' was thrown while saving related records during afterSave event: ' . $e->getMessage(), __METHOD__);
-                $this->_rollback();
                 /***
                  * Sadly mandatory because the error occurred during afterSave event
                  * and we don't want the user/developper not to be aware of the issue.
@@ -531,9 +492,6 @@ class SaveRelationsBehavior extends Behavior
             }
             $owner->refresh();
             $this->_relationsSaveStarted = false;
-            if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-                $this->_transaction->commit();
-            }
         }
     }
 
@@ -718,7 +676,6 @@ class SaveRelationsBehavior extends Behavior
                 }
             } catch (Exception $e) {
                 Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
-                $this->_rollback();
                 throw $e;
             }
         }
