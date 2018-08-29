@@ -316,8 +316,6 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * For each related model, try to save it first.
-     * If set in the owner model, operation is done in a transactional way so if one of the models should not validate
-     * or be saved, a rollback will occur.,
      * This is done during the before validation process to be able to set the related foreign keys.
      * @param BaseActiveRecord $model
      * @param ModelEvent $event
@@ -327,7 +325,6 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function saveRelatedRecords(BaseActiveRecord $model, ModelEvent $event)
     {
-        $this->startTransactionForModel($model);
         try {
             foreach ($this->_relations as $relationName) {
                 if (array_key_exists($relationName, $this->_oldRelationValue)) { // Relation was not set, do nothing...
@@ -347,7 +344,7 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
-            $this->_rollback();
+            $this->_rollback(); // Rollback transaction if any have been started
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
             return false;
@@ -396,6 +393,7 @@ class SaveRelationsBehavior extends Behavior
             // Save Has one relation new record
             if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
                 Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
+                $this->startTransactionForModel($model);
                 $model->{$relationName}->save();
             }
         }
