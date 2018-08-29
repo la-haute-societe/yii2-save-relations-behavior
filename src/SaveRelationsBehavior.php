@@ -8,6 +8,7 @@ use yii\base\Behavior;
 use yii\base\Component;
 use yii\base\Exception;
 use yii\base\InvalidArgumentException;
+use yii\base\InvalidConfigException;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
 use yii\db\ActiveQuery;
@@ -148,6 +149,25 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * Set the named single relation with the given value
+     * @param string $relationName
+     * @param $value
+     * @throws \yii\base\InvalidArgumentException
+     */
+    protected function setSingleRelation($relationName, $value)
+    {
+        /** @var BaseActiveRecord $owner */
+        $owner = $this->owner;
+        /** @var ActiveQuery $relation */
+        $relation = $owner->getRelation($relationName);
+        if (!($value instanceof $relation->modelClass)) {
+            $value = $this->processModelAsArray($value, $relation, $relationName);
+        }
+        $this->_newRelationValue[$relationName] = $value;
+        $owner->populateRelation($relationName, $value);
+    }
+
+    /**
      * Set the named multiple relation with the given value
      * @param string $relationName
      * @param $value
@@ -269,25 +289,6 @@ class SaveRelationsBehavior extends Behavior
             $relationModel->setAttributes($data);
         }
         return $relationModel;
-    }
-
-    /**
-     * Set the named single relation with the given value
-     * @param string $relationName
-     * @param $value
-     * @throws \yii\base\InvalidArgumentException
-     */
-    protected function setSingleRelation($relationName, $value)
-    {
-        /** @var BaseActiveRecord $owner */
-        $owner = $this->owner;
-        /** @var ActiveQuery $relation */
-        $relation = $owner->getRelation($relationName);
-        if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation, $relationName);
-        }
-        $this->_newRelationValue[$relationName] = $value;
-        $owner->populateRelation($relationName, $value);
     }
 
     /**
