@@ -1,5 +1,12 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.5.3] (unreleased)
+### Fixed
+- Bug #36: Fix an issue with HasMany relations with composite keys (thx @leandrogehlen)
+
+### Added
+- Enh #37: Add a `relationKeyName` property to determine the key used to load relations data.
+
 ## [1.5.2]
 ### Fixed
 - Fix a regression in Has One saving introduced by #30 fix.
@@ -17,7 +24,7 @@
 
 ## [1.5.0]
 ### Added
-- Enh #5: Ability to automaticaly delete related records along with the main model
+- Enh #5: Ability to automatically delete related records along with the main model
 
 ### Fixed
 - Bug #30: HasOne relation saving issue (thx @phrakon)

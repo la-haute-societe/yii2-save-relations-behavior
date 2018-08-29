@@ -26,8 +26,11 @@ use yii\helpers\VarDumper;
 class SaveRelationsBehavior extends Behavior
 {
 
+    const RELATION_KEY_FORMNAME = 'formName';
+    const RELATION_KEY_MODELNAME = 'modelName';
+
     public $relations = [];
-    public $useFormName = true;
+    public $relationKeyName = self::RELATION_KEY_FORMNAME;
 
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
@@ -732,12 +735,13 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         foreach ($this->_relations as $relationName) {
-            /** @var ActiveQuery $relation */
-            $relation = $owner->getRelation($relationName);
-            $modelClass = $relation->modelClass;
-            /** @var ActiveQuery $relationalModel */
-            $relationalModel = new $modelClass;
-            $keyName = $this->useFormName ? $relationalModel->formName() : $relationName;
+//            /** @var ActiveQuery $relation */
+//            $relation = $owner->getRelation($relationName);
+//            $modelClass = $relation->modelClass;
+//            /** @var ActiveQuery $relationalModel */
+//            $relationalModel = new $modelClass;
+            //$keyName = ($this->relationKeyName === self::RELATION_KEY_FORMNAME ? $relationalModel->formName() : $relationName);
+            $keyName = $this->_getRelationKeyName($relationName);
             if (array_key_exists($keyName, $data)) {
                 $owner->{$relationName} = $data[$keyName];
             }
@@ -761,5 +765,32 @@ class SaveRelationsBehavior extends Behavior
             throw new InvalidArgumentException('Unknown ' . $relationName . ' relation');
         }
 
+    }
+
+    /**
+     * @param $relationName
+     * @return mixed
+     * @throws InvalidConfigException
+     */
+    private function _getRelationKeyName($relationName)
+    {
+        switch ($this->relationKeyName) {
+            case self::RELATION_KEY_MODELNAME:
+                $keyName = $relationName;
+                break;
+            case self::RELATION_KEY_FORMNAME:
+                /** @var BaseActiveRecord $owner */
+                $owner = $this->owner;
+                /** @var ActiveQuery $relation */
+                $relation = $owner->getRelation($relationName);
+                $modelClass = $relation->modelClass;
+                /** @var ActiveQuery $relationalModel */
+                $relationalModel = new $modelClass;
+                $keyName = $relationalModel->formName();
+                break;
+            default:
+                throw new InvalidConfigException('Unknown relation key name');
+        }
+        return $keyName;
     }
 }

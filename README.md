@@ -277,3 +277,9 @@ $project->loadRelations(Yii::$app->request->post());
 
 You can even further simplify the process by adding the `SaveRelationsTrait` to your model.
 In that case, a call to the `load()` method will also automatically trigger a call to the `loadRelations()` method by using the same data, so you basically won't have to change your controllers.
+
+The `relationKeyName` property can be used to decide how the relations data will be retrieved from the data parameter. 
+
+Possible constants values are:
+* `SaveRelationsBehavior::RELATION_KEY_FORMNAME` (default): the key name will be compute using the model [`formName()`](https://www.yiiframework.com/doc/api/2.0/yii-base-model#formName()-detail) method
+* `SaveRelationsBehavior::RELATION_KEY_MODELNAME`: the relation name as defined in the behavior declarations will be used
