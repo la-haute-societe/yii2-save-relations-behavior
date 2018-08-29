@@ -27,11 +27,11 @@ use yii\helpers\VarDumper;
 class SaveRelationsBehavior extends Behavior
 {
 
-    const RELATION_KEY_FORMNAME = 'formName';
-    const RELATION_KEY_MODELNAME = 'modelName';
+    const RELATION_KEY_FORM_NAME = 'formName';
+    const RELATION_KEY_RELATION_NAME = 'relationName';
 
     public $relations = [];
-    public $relationKeyName = self::RELATION_KEY_FORMNAME;
+    public $relationKeyName = self::RELATION_KEY_FORM_NAME;
 
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
@@ -776,10 +776,10 @@ class SaveRelationsBehavior extends Behavior
     private function _getRelationKeyName($relationName)
     {
         switch ($this->relationKeyName) {
-            case self::RELATION_KEY_MODELNAME:
+            case self::RELATION_KEY_RELATION_NAME:
                 $keyName = $relationName;
                 break;
-            case self::RELATION_KEY_FORMNAME:
+            case self::RELATION_KEY_FORM_NAME:
                 /** @var BaseActiveRecord $owner */
                 $owner = $this->owner;
                 /** @var ActiveQuery $relation */

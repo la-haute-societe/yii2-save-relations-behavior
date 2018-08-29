@@ -852,7 +852,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $company->attachBehavior('saveRelations', [
             'class'           => SaveRelationsBehavior::className(),
             'relations'       => ['users'],
-            'relationKeyName' => SaveRelationsBehavior::RELATION_KEY_MODELNAME
+            'relationKeyName' => SaveRelationsBehavior::RELATION_KEY_RELATION_NAME
         ]);
 
         $data = [
