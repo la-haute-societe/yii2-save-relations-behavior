@@ -41,6 +41,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $db->createCommand()->dropTable('tags')->execute();
         $db->createCommand()->dropTable('project_link')->execute();
         $db->createCommand()->dropTable('project_contact')->execute();
+        $db->createCommand()->dropTable('project_image')->execute();
         $db->createCommand()->dropTable('dummy')->execute();
         parent::tearDown();
     }
@@ -124,9 +125,16 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         // Project Contact
         $db->createCommand()->createTable('project_contact', [
             'project_id' => $migration->integer()->notNull(),
-            'email'    => $migration->text()->notNull(),
-            'phone' => $migration->text(),
+            'email'      => $migration->string()->notNull(),
+            'phone'      => $migration->string(),
             'PRIMARY KEY(project_id, email)'
+        ])->execute();
+
+        // Project Image
+        $db->createCommand()->createTable('project_image', [
+            'id'         => $migration->primaryKey(),
+            'project_id' => $migration->integer()->notNull(),
+            'path'       => $migration->string()->notNull()
         ])->execute();
 
         // Dummy
@@ -181,6 +189,12 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 
         $db->createCommand()->batchInsert('project_contact', ['email', 'phone', 'project_id'], [
             ['admin@apple.com', '(123) 456–7890', 1]
+        ])->execute();
+
+        $db->createCommand()->batchInsert('project_image', ['id', 'project_id', 'path'], [
+            [1, 1, '/images/macosx.png'],
+            [2, 1, '/images/macosx_icon.png'],
+            [3, 2, '/images/windows.png']
         ])->execute();
 
         $db->createCommand()->batchInsert('project_user', ['project_id', 'user_id'], [
@@ -536,6 +550,28 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals($project->contacts[1]->email, 'new@apple.com');
         $this->assertEquals($project->contacts[1]->phone, '(987) 654–3210');
+    }
+
+    public function testLoadHasManyWithoutReferenceKeyShouldSucceed()
+    {
+        $project = Project::findOne(1);
+        $data = [
+            'ProjectImage' => [
+                [
+                    'path' => '/images/macosx_new.png'
+                ],
+                [
+                    'id' => 2,
+                    'path' => '/images/macosx_updated.png'
+                ]
+            ]
+        ];
+        $project->loadRelations($data);
+        $this->assertTrue($project->save(), 'Project could not be saved');
+        $this->assertCount(2, $project->images, "Project should have 2 images");
+        $this->assertEquals($project->images[0]->id, 2);
+        $this->assertEquals($project->images[0]->path, '/images/macosx_updated.png');
+        $this->assertEquals($project->images[1]->path, '/images/macosx_new.png');
     }
 
     public function testAssignSingleObjectToHasManyRelationShouldSucceed()
