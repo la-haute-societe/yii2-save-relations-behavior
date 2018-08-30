@@ -14,7 +14,6 @@ use yii\base\UnknownPropertyException;
 use yii\db\ActiveQuery;
 use yii\db\BaseActiveRecord;
 use yii\db\Exception as DbException;
-use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 use yii\helpers\VarDumper;
@@ -38,7 +37,6 @@ class SaveRelationsBehavior extends Behavior
     private $_newRelationValue = []; // Store update relations value
     private $_relationsToDelete = [];
     private $_relationsSaveStarted = false;
-    private $_transaction;
 
     /** @var BaseActiveRecord[] $_savedHasOneModels */
     private $_savedHasOneModels = [];
@@ -348,7 +346,7 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
-            $this->_rollback(); // Rollback transaction if any have been started
+            $this->_rollback(); // Rollback saved records during validation process, if any
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
             return false;
@@ -513,9 +511,6 @@ class SaveRelationsBehavior extends Behavior
             }
             $owner->refresh();
             $this->_relationsSaveStarted = false;
-            if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-                $this->_transaction->commit();
-            }
         }
     }
 
