@@ -40,6 +40,9 @@ class SaveRelationsBehavior extends Behavior
     private $_relationsSaveStarted = false;
     private $_transaction;
 
+    /** @var BaseActiveRecord[] $_savedHasOneModels */
+    private $_savedHasOneModels = [];
+
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
     private $_relationsCascadeDelete = [];
@@ -315,8 +318,9 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * For each related model, try to save it first.
-     * This is done during the before validation process to be able to set the related foreign keys.
+     * Prepare each related model (validate or save if needed).
+     * This is done during the before validation process to be able
+     * to set the related foreign keys for newly created has one records.
      * @param BaseActiveRecord $model
      * @param ModelEvent $event
      * @return bool
@@ -354,30 +358,6 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * @param BaseActiveRecord $model
-     */
-    protected function startTransactionForModel(BaseActiveRecord $model)
-    {
-        if ($this->isModelTransactional($model) && is_null($model->getDb()->transaction)) {
-            $this->_transaction = $model->getDb()->beginTransaction();
-        }
-    }
-
-    /**
-     * @param BaseActiveRecord $model
-     * @return bool
-     */
-    protected function isModelTransactional(BaseActiveRecord $model)
-    {
-        if (method_exists($model, 'isTransactional')) {
-            return ($model->isNewRecord && $model->isTransactional($model::OP_INSERT))
-                || (!$model->isNewRecord && $model->isTransactional($model::OP_UPDATE))
-                || $model->isTransactional($model::OP_ALL);
-        }
-        return false;
-    }
-
-    /**
-     * @param BaseActiveRecord $model
      * @param ModelEvent $event
      * @param $relationName
      */
@@ -393,8 +373,9 @@ class SaveRelationsBehavior extends Behavior
             // Save Has one relation new record
             if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
                 Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
-                $this->startTransactionForModel($model);
-                $model->{$relationName}->save();
+                if ($model->{$relationName}->save()) {
+                    $this->_savedHasOneModels[] = $model->{$relationName};
+                }
             }
         }
     }
@@ -457,15 +438,15 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * Rollback transaction if any
+     * Delete newly created Has one models if any
      * @throws DbException
      */
     private function _rollback()
     {
-        if (($this->_transaction instanceof Transaction) && $this->_transaction->isActive) {
-            $this->_transaction->rollBack(); // If anything goes wrong, transaction will be rolled back
-            Yii::info('Rolling back', __METHOD__);
+        foreach ($this->_savedHasOneModels as $savedHasOneModel) {
+            $savedHasOneModel->delete();
         }
+        $this->_savedHasOneModels = [];
     }
 
     /**
@@ -728,18 +709,13 @@ class SaveRelationsBehavior extends Behavior
     /**
      * Populates relations with input data
      * @param array $data
+     * @throws InvalidConfigException
      */
     public function loadRelations($data)
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         foreach ($this->_relations as $relationName) {
-//            /** @var ActiveQuery $relation */
-//            $relation = $owner->getRelation($relationName);
-//            $modelClass = $relation->modelClass;
-//            /** @var ActiveQuery $relationalModel */
-//            $relationalModel = new $modelClass;
-            //$keyName = ($this->relationKeyName === self::RELATION_KEY_FORMNAME ? $relationalModel->formName() : $relationName);
             $keyName = $this->_getRelationKeyName($relationName);
             if (array_key_exists($keyName, $data)) {
                 $owner->{$relationName} = $data[$keyName];
