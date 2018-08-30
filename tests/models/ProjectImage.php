@@ -4,9 +4,6 @@ namespace tests\models;
 
 class ProjectImage extends \yii\db\ActiveRecord
 {
-    /** @var int */
-    protected $order;
-
     /**
      * @inheritdoc
      */
