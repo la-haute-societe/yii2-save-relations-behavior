@@ -281,5 +281,5 @@ In that case, a call to the `load()` method will also automatically trigger a ca
 The `relationKeyName` property can be used to decide how the relations data will be retrieved from the data parameter. 
 
 Possible constants values are:
-* `SaveRelationsBehavior::RELATION_KEY_FORM_NAME` (default): the key name will be compute using the model [`formName()`](https://www.yiiframework.com/doc/api/2.0/yii-base-model#formName()-detail) method
+* `SaveRelationsBehavior::RELATION_KEY_FORM_NAME` (default): the key name will be computed using the model [`formName()`](https://www.yiiframework.com/doc/api/2.0/yii-base-model#formName()-detail) method
 * `SaveRelationsBehavior::RELATION_KEY_RELATION_NAME`: the relation name as defined in the behavior declarations will be used
