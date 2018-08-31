@@ -3,6 +3,7 @@
 ## [1.6.0]
 ### Fixed
 - Bug #36: Fix an issue with HasMany relations with composite keys (thx @leandrogehlen)
+- Bug #41: Fixes error loading `hasMany` relation without referenced key in data (thx @leandrogehlen)
 - Fix for transaction being started during the `beforeValidate` event (thx @leandrogehlen)
 
 ### Added
