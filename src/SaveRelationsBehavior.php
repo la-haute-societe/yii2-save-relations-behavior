@@ -241,7 +241,7 @@ class SaveRelationsBehavior extends Behavior
                     $fks[$modelAttribute] = $data[$modelAttribute];
                 } elseif ($relation->multiple && !$relation->via) {
                     foreach ($link as $relatedAttribute => $relatedModelAttribute) {
-                        if (!isset($data[$relatedAttribute])) {
+                        if (!isset($data[$relatedAttribute]) && in_array($relatedAttribute, $modelClass::primaryKey())) {
                             $fks[$relatedAttribute] = $this->owner->{$relatedModelAttribute};
                         }
                     }

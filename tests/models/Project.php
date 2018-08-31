@@ -26,6 +26,7 @@ class Project extends \yii\db\ActiveRecord
                     'company',
                     'users',
                     'contacts',
+                    'images',
                     'links'        => ['scenario' => Link::SCENARIO_FIRST],
                     'projectLinks' => ['cascadeDelete' => true],
                     'tags'         => [
@@ -102,6 +103,14 @@ class Project extends \yii\db\ActiveRecord
     public function getContacts()
     {
         return $this->hasMany(ProjectContact::className(), ['project_id' => 'id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getImages()
+    {
+        return $this->hasMany(ProjectImage::className(), ['project_id' => 'id']);
     }
 
     /**
