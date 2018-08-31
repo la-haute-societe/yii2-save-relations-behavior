@@ -165,9 +165,8 @@ $project->save();
 
 Attributes of the related model will be massively assigned using the `load() method. So remember to declare the according attributes as safe in the rules of the related model.
 
-> **Notes:**
-> - Related models are saved during the EVENT_BEFORE_VALIDATE event of the owner model. Transaction will start at this point according to the transactions() method of the model.
-> - Only newly created or changed related models will be saved.
+> **Note:**
+> Only newly created or changed related models will be saved.
 
 > See the PHPUnit tests for more examples.
 

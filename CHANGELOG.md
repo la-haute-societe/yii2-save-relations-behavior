@@ -1,11 +1,15 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
-## [1.5.3] (unreleased)
+## [1.6.0]
 ### Fixed
 - Bug #36: Fix an issue with HasMany relations with composite keys (thx @leandrogehlen)
+- Fix for transaction being started during the `beforeValidate` event (thx @leandrogehlen)
 
 ### Added
 - Enh #37: Add a `relationKeyName` property to determine the key used to load relations data.
+
+### Changed
+- Removed `isModelTransactional` protected method. Transactions are not started by the behavior any more.
 
 ## [1.5.2]
 ### Fixed
