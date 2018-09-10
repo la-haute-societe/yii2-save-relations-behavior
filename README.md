@@ -288,8 +288,8 @@ Get old relations values
 ------------------------
 
 To retrieve relations value prior to there most recent modification until the model is saved, you can use:
-* `getOldAttribute($name)` method: Get a named relation old value.
-* `getOldAttribute()` method: Get an array of relations index by there name with there old values.
+* `getOldRelation($name)` method: Get a named relation old value.
+* `getOldRelations()` method: Get an array of relations index by there name with there old values.
 
 > **Notes**
 > * If a relation has not been modified yet, its initial value will be returned
