@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.7.0] (unreleased)
+### Added
+- Enh #42: Add the ability to retrieve old relations values
+
 ## [1.6.0]
 ### Fixed
 - Bug #36: Fix an issue with HasMany relations with composite keys (thx @leandrogehlen)

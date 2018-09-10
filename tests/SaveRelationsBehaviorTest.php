@@ -561,7 +561,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
                     'path' => '/images/macosx_new.png'
                 ],
                 [
-                    'id' => 2,
+                    'id'   => 2,
                     'path' => '/images/macosx_updated.png'
                 ]
             ]
@@ -904,5 +904,50 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('NewSoft', $company->name, 'Company\'s name is wrong');
         $this->assertEquals('user1', $company->users[0]->username);
         $this->assertEquals('user2', $company->users[1]->username);
+    }
+
+    public function testGetOldRelations()
+    {
+        $project = Project::findOne(1);
+        $project->company = Company::findOne(2);
+        $links = [
+            ['language' => 'fr', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/fr-fr/windows/features', 'link_type_id' => 2],
+            ['language' => 'en', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/en-us/windows/features', 'link_type_id' => 2]
+        ];
+        $project->links = $links;
+        $oldRelations = $project->getOldRelations();
+        $this->assertArrayHasKey('company', $oldRelations);
+        $this->assertArrayHasKey('links', $oldRelations);
+        $this->assertCount(2, $oldRelations['links']);
+        $oldLinks = $project->getOldRelation('links');
+        $this->assertInternalType('array', $oldLinks);
+        $this->assertEquals($oldLinks[0]->language, 'fr');
+        $this->assertEquals($oldLinks[0]->name, 'mac_os_x');
+        $this->assertEquals($oldLinks[0]->link, 'http://www.apple.com/fr/osx/');
+        $this->assertEquals($oldLinks[0]->link_type_id, 1);
+        $this->assertEquals($oldLinks[1]->language, 'en');
+        $this->assertEquals($oldLinks[1]->name, 'mac_os_x');
+        $this->assertEquals($oldLinks[1]->link, 'http://www.apple.com/osx/');
+        $this->assertEquals($oldLinks[1]->link_type_id, 1);
+        $oldCompany = $project->getOldRelation('company');
+        $this->assertInstanceOf(Company::className(), $oldCompany);
+        $this->assertEquals($oldCompany->id, 1);
+        $this->assertEquals($oldCompany->name, 'Apple');
+        $this->assertTrue($project->save());
+        $oldLinks = $project->getOldRelation('links');
+        $this->assertInternalType('array', $oldLinks);
+        $this->assertEquals($oldLinks[0]->language, 'fr');
+        $this->assertEquals($oldLinks[0]->name, 'windows10');
+        $this->assertEquals($oldLinks[0]->link, 'https://www.microsoft.com/fr-fr/windows/features');
+        $this->assertEquals($oldLinks[0]->link_type_id, 2);
+        $this->assertEquals($oldLinks[1]->language, 'en');
+        $this->assertEquals($oldLinks[1]->name, 'windows10');
+        $this->assertEquals($oldLinks[1]->link, 'https://www.microsoft.com/en-us/windows/features');
+        $this->assertEquals($oldLinks[1]->link_type_id, 2);
+        $oldCompany = $project->getOldRelation('company');
+        $this->assertInstanceOf(Company::className(), $oldCompany);
+        $this->assertEquals($oldCompany->id, 2);
+        $this->assertEquals($oldCompany->name, 'Microsoft');
+
     }
 }

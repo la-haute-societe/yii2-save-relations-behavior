@@ -763,4 +763,27 @@ class SaveRelationsBehavior extends Behavior
         }
         return $keyName;
     }
+
+    /**
+     * Return the old relations values.
+     * @return array
+     */
+    public function getOldRelations()
+    {
+        $oldRelations = [];
+        foreach ($this->_relations as $relationName) {
+            $oldRelations[$relationName] = $this->getOldRelation($relationName);
+        }
+        return $oldRelations;
+    }
+
+    /**
+     * Returns the old value of the named relation.
+     * @param $relationName
+     * @return mixed
+     */
+    public function getOldRelation($relationName)
+    {
+        return array_key_exists($relationName, $this->_oldRelationValue) ? $this->_oldRelationValue[$relationName] : $this->owner->{$relationName};
+    }
 }

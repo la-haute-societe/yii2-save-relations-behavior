@@ -282,3 +282,15 @@ The `relationKeyName` property can be used to decide how the relations data will
 Possible constants values are:
 * `SaveRelationsBehavior::RELATION_KEY_FORM_NAME` (default): the key name will be computed using the model [`formName()`](https://www.yiiframework.com/doc/api/2.0/yii-base-model#formName()-detail) method
 * `SaveRelationsBehavior::RELATION_KEY_RELATION_NAME`: the relation name as defined in the behavior declarations will be used
+
+
+Get old relations values
+------------------------
+
+To retrieve relations value prior to there most recent modification until the model is saved, you can use:
+* `getOldAttribute($name)` method: Get a named relation old value.
+* `getOldAttribute()` method: Get an array of relations index by there name with there old values.
+
+> **Notes**
+> * If a relation has not been modified yet, its initial value will be returned
+> * Only relations defined in the behavior parameters will be returned
