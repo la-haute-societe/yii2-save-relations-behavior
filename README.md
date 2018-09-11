@@ -287,10 +287,18 @@ Possible constants values are:
 Get old relations values
 ------------------------
 
-To retrieve relations value prior to there most recent modification until the model is saved, you can use:
-* `getOldRelation($name)` method: Get a named relation old value.
-* `getOldRelations()` method: Get an array of relations index by there name with there old values.
+To retrieve relations value prior to there most recent modification until the model is saved, the following methods can be used:
+* `getOldRelation($name)`: Get a named relation old value.
+* `getOldRelations()`: Get an array of relations index by there name with there old values.
 
 > **Notes**
 > * If a relation has not been modified yet, its initial value will be returned
 > * Only relations defined in the behavior parameters will be returned
+
+
+Get dirty relations
+-------------------
+To deal with dirty (modified) relations since the model was loaded, the following methods can be used:
+* `getDirtyRelations()`: Get the relations that have been modified since they are loaded (name-value pairs)
+* `markRelationDirty($name)`: Mark a relation as dirty even if it's not been modified.
+

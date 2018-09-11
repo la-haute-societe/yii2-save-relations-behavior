@@ -3,6 +3,7 @@
 ## [1.7.0] (unreleased)
 ### Added
 - Enh #42: Add the ability to retrieve old relations values
+- Enh #43: Add the ability to retrieve and mark dirty relations
 
 ## [1.6.0]
 ### Fixed
