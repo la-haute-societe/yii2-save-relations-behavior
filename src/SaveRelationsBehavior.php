@@ -766,7 +766,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Return the old relations values.
-     * @return array
+     * @return array The old relations (name-value pairs)
      */
     public function getOldRelations()
     {
@@ -779,11 +779,40 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Returns the old value of the named relation.
-     * @param $relationName
+     * @param $relationName The relations name as defined in the behavior `relations` parameter
      * @return mixed
      */
     public function getOldRelation($relationName)
     {
         return array_key_exists($relationName, $this->_oldRelationValue) ? $this->_oldRelationValue[$relationName] : $this->owner->{$relationName};
+    }
+
+    /**
+     * Returns the relations that have been modified since they are loaded.
+     * @return array The changed relations (name-value pairs)
+     */
+    public function getDirtyRelations()
+    {
+        $dirtyRelations = [];
+        foreach ($this->_relations as $relationName) {
+            if (array_key_exists($relationName, $this->_oldRelationValue)) {
+                $dirtyRelations[$relationName] = $this->owner->{$relationName};
+            }
+        }
+        return $dirtyRelations;
+    }
+
+    /**
+     * Mark a relation as dirty
+     * @param $relationName
+     * @return bool Whether the operation succeeded.
+     */
+    public function markRelationDirty($relationName)
+    {
+        if (in_array($relationName, $this->_relations) && !array_key_exists($relationName, $this->_oldRelationValue)) {
+            $this->_oldRelationValue[$relationName] = $this->owner->{$relationName};
+            return true;
+        }
+        return false;
     }
 }

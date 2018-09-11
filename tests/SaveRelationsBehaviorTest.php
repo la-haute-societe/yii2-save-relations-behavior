@@ -950,4 +950,31 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($oldCompany->name, 'Microsoft');
 
     }
+
+    public function testGetDirtyRelations()
+    {
+        $project = Project::findOne(1);
+        $project->company = Company::findOne(2);
+        $links = [
+            ['language' => 'fr', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/fr-fr/windows/features', 'link_type_id' => 2],
+            ['language' => 'en', 'name' => 'windows10', 'link' => 'https://www.microsoft.com/en-us/windows/features', 'link_type_id' => 2]
+        ];
+        $project->links = $links;
+        $dirtyRelations = $project->getDirtyRelations();
+        $this->assertCount(2, $dirtyRelations);
+        $this->assertArrayHasKey('company', $dirtyRelations);
+        $this->assertArrayHasKey('links', $dirtyRelations);
+        $this->assertArrayNotHasKey('tags', $dirtyRelations);
+        $this->assertEquals($dirtyRelations['company'], $project->company);
+        $this->assertEquals($dirtyRelations['links'], $project->links);
+    }
+
+    public function testMarkRelationDirty()
+    {
+        $project = Project::findOne(1);
+        $this->assertArrayNotHasKey('company', $project->getDirtyRelations());
+        $this->assertFalse($project->markRelationDirty('wrongRelationName'));
+        $this->assertTrue($project->markRelationDirty('company'));
+        $this->assertArrayHasKey('company', $project->getDirtyRelations());
+    }
 }
