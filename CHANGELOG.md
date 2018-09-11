@@ -1,6 +1,6 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
-## [1.7.0] (unreleased)
+## [1.7.0]
 ### Added
 - Enh #42: Add the ability to retrieve old relations values
 - Enh #43: Add the ability to retrieve and mark dirty relations
