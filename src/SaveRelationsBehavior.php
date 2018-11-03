@@ -288,6 +288,10 @@ class SaveRelationsBehavior extends Behavior
         }
         if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
             $relationModel->setAttributes($data);
+            if ($relationModel->hasMethod('loadRelations')) {
+                $relationModel->loadRelations($data);
+            }
+
         }
         return $relationModel;
     }
@@ -738,7 +742,7 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
-     * @param $relationName
+     * @param $relationName string
      * @return mixed
      * @throws InvalidConfigException
      */
@@ -779,7 +783,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Returns the old value of the named relation.
-     * @param $relationName The relations name as defined in the behavior `relations` parameter
+     * @param $relationName string The relations name as defined in the behavior `relations` parameter
      * @return mixed
      */
     public function getOldRelation($relationName)
@@ -804,7 +808,7 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Mark a relation as dirty
-     * @param $relationName
+     * @param $relationName string
      * @return bool Whether the operation succeeded.
      */
     public function markRelationDirty($relationName)
