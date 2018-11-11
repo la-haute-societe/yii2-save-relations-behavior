@@ -977,4 +977,45 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($project->markRelationDirty('company'));
         $this->assertArrayHasKey('company', $project->getDirtyRelations());
     }
+
+    public function testLoadNestedDataModels()
+    {
+        $project = Project::findOne(1);
+        $data = [
+            'Project' => [
+                'name'    => 'Other name',
+                'company' => [
+                    'name'  => 'New Company',
+                    'users' => [
+                        [
+                            'username' => 'New user'
+                        ]
+                    ]
+                ],
+                'users'   => [
+                    [
+                        'username'    => 'Another user',
+                        'company'     => 1,
+                        'userProfile' => [
+                            'bio' => 'Another user great story'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        $project->load($data);
+        $this->assertEquals($project->name, "Other name");
+        $this->assertEquals($project->company->name, "New Company");
+        $this->assertCount(1, $project->users);
+        $this->assertEquals($project->users[0]->username, "Another user");
+        $this->assertEquals($project->users[0]->company->name, "Apple");
+        $this->assertEquals($project->company->users[0]->username, "New user");
+        $this->assertTrue($project->save(), 'Project could not be saved ' . VarDumper::dumpAsString($project->getErrors()));
+        $project->refresh();
+        $this->assertEquals($project->name, "Other name");
+        $this->assertEquals($project->company->name, "New Company");
+        $this->assertEquals($project->company->users[0]->username, "New user");
+        $this->assertCount(1, $project->users);
+        $this->assertEquals($project->users[0]->username, "Another user");
+    }
 }

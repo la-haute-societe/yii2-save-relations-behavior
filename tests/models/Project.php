@@ -3,9 +3,12 @@
 namespace tests\models;
 
 use lhs\Yii2SaveRelationsBehavior\SaveRelationsBehavior;
+use lhs\Yii2SaveRelationsBehavior\SaveRelationsTrait;
 
 class Project extends \yii\db\ActiveRecord
 {
+    use SaveRelationsTrait;
+
     /**
      * @inheritdoc
      */
@@ -50,6 +53,7 @@ class Project extends \yii\db\ActiveRecord
         return [
             [['name', 'company_id'], 'required'],
             [['name'], 'unique', 'targetAttribute' => ['company_id', 'name']],
+            [['company', 'links', 'users'], 'safe']
         ];
     }
 

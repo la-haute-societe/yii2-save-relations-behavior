@@ -37,9 +37,10 @@ class User extends \yii\db\ActiveRecord
     {
         return [
             ['company_id', 'integer'],
-            ['username', 'required'],
+            [['username'], 'required'],
             ['username', 'unique', 'targetClass' => '\tests\models\User'],
             [['company_id'], 'exist', 'skipOnError' => true, 'targetClass' => Company::className(), 'targetAttribute' => ['company_id' => 'id']],
+            [['userProfile', 'company'], 'safe']
         ];
     }
 

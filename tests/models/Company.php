@@ -36,6 +36,7 @@ class Company extends \yii\db\ActiveRecord
         return [
             ['name', 'required'],
             ['name', 'unique', 'targetClass' => '\tests\models\Company'],
+            [['users'], 'safe']
         ];
     }
 

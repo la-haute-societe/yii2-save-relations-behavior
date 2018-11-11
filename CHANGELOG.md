@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.7.1]
+### Fixed
+- Fix #23: Relational data was not loaded for nested relational models (thx @toreonify)
+
 ## [1.7.0]
 ### Added
 - Enh #42: Add the ability to retrieve old relations values
