@@ -716,9 +716,7 @@ class SaveRelationsBehavior extends Behavior
         $owner = $this->owner;
         foreach ($this->_relations as $relationName) {
             $keyName = $this->_getRelationKeyName($relationName);
-            if (array_key_exists($keyName, $data)) {
-                $owner->{$relationName} = $data[$keyName];
-            }
+            $owner->{$relationName} = $data[$keyName] ?? [];            
         }
     }
 
