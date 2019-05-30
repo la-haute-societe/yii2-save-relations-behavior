@@ -32,18 +32,18 @@ class SaveRelationsBehavior extends Behavior
     public $relations = [];
     public $relationKeyName = self::RELATION_KEY_FORM_NAME;
 
-    private $_relations = [];
-    private $_oldRelationValue = []; // Store initial relations value
-    private $_newRelationValue = []; // Store update relations value
-    private $_relationsToDelete = [];
-    private $_relationsSaveStarted = false;
+    protected $_relations = [];
+    protected $_oldRelationValue = []; // Store initial relations value
+    protected $_newRelationValue = []; // Store update relations value
+    protected $_relationsToDelete = [];
+    protected $_relationsSaveStarted = false;
 
     /** @var BaseActiveRecord[] $_savedHasOneModels */
-    private $_savedHasOneModels = [];
+    protected $_savedHasOneModels = [];
 
-    private $_relationsScenario = [];
-    private $_relationsExtraColumns = [];
-    private $_relationsCascadeDelete = [];
+    protected $_relationsScenario = [];
+    protected $_relationsExtraColumns = [];
+    protected $_relationsCascadeDelete = [];
 
     /**
      * @inheritdoc
@@ -222,7 +222,7 @@ class SaveRelationsBehavior extends Behavior
      * @param BaseActiveRecord $modelClass
      * @return array
      */
-    private function _getRelatedFks($data, $relation, $modelClass)
+    protected function _getRelatedFks($data, $relation, $modelClass)
     {
         $fks = [];
         if (is_array($data)) {
@@ -271,7 +271,7 @@ class SaveRelationsBehavior extends Behavior
      * @param $relationName
      * @return BaseActiveRecord
      */
-    private function _loadOrCreateRelationModel($data, $fks, $modelClass, $relationName)
+    protected function _loadOrCreateRelationModel($data, $fks, $modelClass, $relationName)
     {
 
         /** @var BaseActiveRecord $relationModel */
@@ -363,7 +363,7 @@ class SaveRelationsBehavior extends Behavior
      * @param ModelEvent $event
      * @param $relationName
      */
-    private function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
+    protected function _prepareHasOneRelation(BaseActiveRecord $model, $relationName, ModelEvent $event)
     {
         Yii::debug("_prepareHasOneRelation for {$relationName}", __METHOD__);
         $relationModel = $model->{$relationName};
@@ -408,7 +408,7 @@ class SaveRelationsBehavior extends Behavior
      * @param string $relationName
      * @param string $prettyRelationName
      */
-    private function _addError($relationModel, $owner, $relationName, $prettyRelationName)
+    protected function _addError($relationModel, $owner, $relationName, $prettyRelationName)
     {
         foreach ($relationModel->errors as $attribute => $attributeErrors) {
             foreach ($attributeErrors as $error) {
@@ -431,7 +431,7 @@ class SaveRelationsBehavior extends Behavior
      * @param BaseActiveRecord $model
      * @param $relationName
      */
-    private function _prepareHasManyRelation(BaseActiveRecord $model, $relationName)
+    protected function _prepareHasManyRelation(BaseActiveRecord $model, $relationName)
     {
         /** @var BaseActiveRecord $relationModel */
         foreach ($model->{$relationName} as $i => $relationModel) {
@@ -443,7 +443,7 @@ class SaveRelationsBehavior extends Behavior
      * Delete newly created Has one models if any
      * @throws DbException
      */
-    private function _rollback()
+    protected function _rollback()
     {
         foreach ($this->_savedHasOneModels as $savedHasOneModel) {
             $savedHasOneModel->delete();
@@ -594,7 +594,7 @@ class SaveRelationsBehavior extends Behavior
      * @return array
      * @throws \RuntimeException
      */
-    private function _getJunctionTableColumns($relationName, $model)
+    protected function _getJunctionTableColumns($relationName, $model)
     {
         $junctionTableColumns = [];
         if (array_key_exists($relationName, $this->_relationsExtraColumns)) {
@@ -621,7 +621,7 @@ class SaveRelationsBehavior extends Behavior
      * @param bool $forceSave
      * @return array
      */
-    private function _computePkDiff($initialRelations, $updatedRelations, $forceSave = false)
+    protected function _computePkDiff($initialRelations, $updatedRelations, $forceSave = false)
     {
         // Compute differences between initial relations and the current ones
         $oldPks = ArrayHelper::getColumn($initialRelations, function (BaseActiveRecord $model) {
@@ -645,7 +645,7 @@ class SaveRelationsBehavior extends Behavior
      * @param $relationName
      * @throws \yii\base\InvalidCallException
      */
-    private function _afterSaveHasOneRelation($relationName)
+    protected function _afterSaveHasOneRelation($relationName)
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
@@ -746,7 +746,7 @@ class SaveRelationsBehavior extends Behavior
      * @return mixed
      * @throws InvalidConfigException
      */
-    private function _getRelationKeyName($relationName)
+    protected function _getRelationKeyName($relationName)
     {
         switch ($this->relationKeyName) {
             case self::RELATION_KEY_RELATION_NAME:
