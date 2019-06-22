@@ -326,7 +326,9 @@ class SaveRelationsBehavior extends Behavior
      */
     public function afterValidate()
     {
-        if ($this->owner->hasErrors() && !empty($this->_savedHasOneModels)) {
+        /* @var $model BaseActiveRecord */
+        $model = $this->owner;
+        if (!empty($this->_savedHasOneModels) && $model->hasErrors()) {
             $this->_rollbackSavedHasOneModels();
         }
     }
