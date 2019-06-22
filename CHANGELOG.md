@@ -1,5 +1,9 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
+## [1.7.2]
+### Fixed
+- Fix #45: Newly created Has One relations were not deleted in case owner model validation failed (thx @douglasgsouza)
+
 ## [1.7.1]
 ### Fixed
 - Fix #23: Relational data was not loaded for nested relational models (thx @toreonify)

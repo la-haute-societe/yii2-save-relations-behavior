@@ -225,7 +225,7 @@ Delete related records when the main model is deleted
 For DBMs with no built in relational constraints, as of 1.5.0 release, one can now specify a relation to be deleted along with the main model.
 
 To do so, the relation should be declared with a property `cascadeDelete` set to true.
-For example, related `projectLinks` records will automaticaly be deleted when the main model will be deleted:
+For example, related `projectLinks` records will automatically be deleted when the main model will be deleted:
 
 ```php
 ...
