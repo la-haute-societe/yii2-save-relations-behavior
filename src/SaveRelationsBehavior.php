@@ -77,6 +77,7 @@ class SaveRelationsBehavior extends Behavior
     {
         return [
             BaseActiveRecord::EVENT_BEFORE_VALIDATE => 'beforeValidate',
+            BaseActiveRecord::EVENT_AFTER_VALIDATE  => 'afterValidate',
             BaseActiveRecord::EVENT_AFTER_INSERT    => 'afterSave',
             BaseActiveRecord::EVENT_AFTER_UPDATE    => 'afterSave',
             BaseActiveRecord::EVENT_BEFORE_DELETE   => 'beforeDelete',
@@ -320,6 +321,17 @@ class SaveRelationsBehavior extends Behavior
     }
 
     /**
+     * After the owner model validation, rollback newly saved hasOne relations if it fails
+     * @throws DbException
+     */
+    public function afterValidate()
+    {
+        if ($this->owner->hasErrors() && !empty($this->_savedHasOneModels)) {
+            $this->_rollbackSavedHasOneModels();
+        }
+    }
+
+    /**
      * Prepare each related model (validate or save if needed).
      * This is done during the before validation process to be able
      * to set the related foreign keys for newly created has one records.
@@ -350,7 +362,7 @@ class SaveRelationsBehavior extends Behavior
             }
         } catch (Exception $e) {
             Yii::warning(get_class($e) . ' was thrown while saving related records during beforeValidate event: ' . $e->getMessage(), __METHOD__);
-            $this->_rollback(); // Rollback saved records during validation process, if any
+            $this->_rollbackSavedHasOneModels(); // Rollback saved records during validation process, if any
             $model->addError($model->formName(), $e->getMessage());
             $event->isValid = false; // Stop saving, something went wrong
             return false;
@@ -443,7 +455,7 @@ class SaveRelationsBehavior extends Behavior
      * Delete newly created Has one models if any
      * @throws DbException
      */
-    private function _rollback()
+    private function _rollbackSavedHasOneModels()
     {
         foreach ($this->_savedHasOneModels as $savedHasOneModel) {
             $savedHasOneModel->delete();
@@ -506,7 +518,7 @@ class SaveRelationsBehavior extends Behavior
                 }
             } catch (Exception $e) {
                 Yii::warning(get_class($e) . ' was thrown while saving related records during afterSave event: ' . $e->getMessage(), __METHOD__);
-                $this->_rollback();
+                $this->_rollbackSavedHasOneModels();
                 /***
                  * Sadly mandatory because the error occurred during afterSave event
                  * and we don't want the user/developper not to be aware of the issue.
@@ -699,7 +711,7 @@ class SaveRelationsBehavior extends Behavior
                 }
             } catch (Exception $e) {
                 Yii::warning(get_class($e) . ' was thrown while deleting related records during afterDelete event: ' . $e->getMessage(), __METHOD__);
-                $this->_rollback();
+                $this->_rollbackSavedHasOneModels();
                 throw $e;
             }
         }

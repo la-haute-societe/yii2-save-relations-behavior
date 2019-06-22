@@ -268,6 +268,16 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('Microsoft', $project->company->name);
     }
 
+    public function testHasOneRelationsShouldNotBeSavedFail()
+    {
+        $project = New Project();
+        $company = new Company();
+        $company->name = "Oracle";
+        $project->company = $company;
+        $this->assertFalse($project->save(), 'Project could be saved');
+        $this->assertEmpty(Company::findOne(['name' => 'Oracle']), 'Company still exists');
+    }
+
     public function testSaveInvalidNewHasOneRelationShouldFail()
     {
         $project = new Project();
