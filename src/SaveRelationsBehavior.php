@@ -9,6 +9,7 @@ use yii\base\Component;
 use yii\base\Exception;
 use yii\base\InvalidArgumentException;
 use yii\base\InvalidConfigException;
+use yii\base\Model;
 use yii\base\ModelEvent;
 use yii\base\UnknownPropertyException;
 use yii\db\ActiveQuery;
@@ -165,7 +166,7 @@ class SaveRelationsBehavior extends Behavior
 
         if (!($value instanceof $relation->modelClass)) {
             //we have an existing hasone relation model
-            if($owner->{$relationName} instanceof $relation->modelClass && !$owner->{$relationName}->getIsNewRecord()) {
+            if(is_array($value) && $this->_getRelatedFks($value, $relation, $relation->modelClass) && $owner->{$relationName} instanceof $relation->modelClass && !$owner->{$relationName}->getIsNewRecord()) {
                 $this->_loadRelationModel($value, $relationName, $owner->{$relationName});
                 $value = $owner->{$relationName};
             } else {
@@ -834,9 +835,9 @@ class SaveRelationsBehavior extends Behavior
     /**
      * @param $data
      * @param $relationName
-     * @param BaseActiveRecord $relationModel
+     * @param $relationModel
      */
-    private function _loadRelationModel($data, $relationName, BaseActiveRecord $relationModel): void
+    private function _loadRelationModel($data, $relationName, ?Model $relationModel): void
     {
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
