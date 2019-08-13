@@ -162,8 +162,15 @@ class SaveRelationsBehavior extends Behavior
         $owner = $this->owner;
         /** @var ActiveQuery $relation */
         $relation = $owner->getRelation($relationName);
+
         if (!($value instanceof $relation->modelClass)) {
-            $value = $this->processModelAsArray($value, $relation, $relationName);
+            //we have an existing hasone relation model
+            if($owner->{$relationName} instanceof $relation->modelClass && !$owner->{$relationName}->getIsNewRecord()) {
+                $this->_loadRelationModel($value, $relationName, $owner->{$relationName});
+                $value = $owner->{$relationName};
+            } else {
+                $value = $this->processModelAsArray($value, $relation, $relationName);
+            }
         }
         $this->_newRelationValue[$relationName] = $value;
         $owner->populateRelation($relationName, $value);
@@ -283,17 +290,7 @@ class SaveRelationsBehavior extends Behavior
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
             $relationModel = new $modelClass;
         }
-        // If a custom scenario is set, apply it here to correctly be able to set the model attributes
-        if (array_key_exists($relationName, $this->_relationsScenario)) {
-            $relationModel->setScenario($this->_relationsScenario[$relationName]);
-        }
-        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
-            $relationModel->setAttributes($data);
-            if ($relationModel->hasMethod('loadRelations')) {
-                $relationModel->loadRelations($data);
-            }
-
-        }
+        $this->_loadRelationModel($data, $relationName, $relationModel);
         return $relationModel;
     }
 
@@ -832,5 +829,25 @@ class SaveRelationsBehavior extends Behavior
             return true;
         }
         return false;
+    }
+
+    /**
+     * @param $data
+     * @param $relationName
+     * @param BaseActiveRecord $relationModel
+     */
+    private function _loadRelationModel($data, $relationName, BaseActiveRecord $relationModel): void
+    {
+        // If a custom scenario is set, apply it here to correctly be able to set the model attributes
+        if (array_key_exists($relationName, $this->_relationsScenario)) {
+            $relationModel->setScenario($this->_relationsScenario[$relationName]);
+        }
+        if (($relationModel instanceof BaseActiveRecord) && is_array($data)) {
+            $relationModel->setAttributes($data);
+            if ($relationModel->hasMethod('loadRelations')) {
+                $relationModel->loadRelations($data);
+            }
+
+        }
     }
 }
