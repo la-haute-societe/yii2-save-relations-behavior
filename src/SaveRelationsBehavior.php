@@ -839,6 +839,10 @@ class SaveRelationsBehavior extends Behavior
      */
     private function _loadRelationModel($data, $relationName, ?Model $relationModel): void
     {
+        if($relationModel === null) {
+            return;
+        }
+
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
             $relationModel->setScenario($this->_relationsScenario[$relationName]);
