@@ -371,7 +371,7 @@ class SaveRelationsBehavior extends Behavior
             // Save Has one relation new record
             if ($event->isValid && (count($model->dirtyAttributes) || $model->{$relationName}->isNewRecord)) {
                 Yii::debug('Saving ' . self::prettyRelationName($relationName) . ' relation model', __METHOD__);
-                if ($model->{$relationName}->save()) {
+                if ($model->{$relationName}->save(false)) {
                     $this->_savedHasOneModels[] = $model->{$relationName};
                 }
             }
@@ -462,7 +462,7 @@ class SaveRelationsBehavior extends Behavior
             foreach ($relation->link as $relatedAttribute => $modelAttribute) {
                 if ($owner->{$modelAttribute} !== $owner->{$relationName}->{$relatedAttribute}) {
                     if ($owner->{$relationName}->isNewRecord) {
-                        $owner->{$relationName}->save();
+                        $owner->{$relationName}->save(false);
                     }
                     $owner->{$modelAttribute} = $owner->{$relationName}->{$relatedAttribute};
                 }
@@ -532,7 +532,7 @@ class SaveRelationsBehavior extends Behavior
             if ($relationModel->isNewRecord) {
                 if (!empty($relation->via)) {
                     if ($relationModel->validate()) {
-                        $relationModel->save();
+                        $relationModel->save(false);
                     } else {
                         $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName, $i));
                         throw new DbException('Related record ' . self::prettyRelationName($relationName, $i) . ' could not be saved.');
@@ -545,7 +545,7 @@ class SaveRelationsBehavior extends Behavior
             }
             if (count($relationModel->dirtyAttributes)) {
                 if ($relationModel->validate()) {
-                    $relationModel->save();
+                    $relationModel->save(false);
                 } else {
                     $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName));
                     throw new DbException('Related record ' . self::prettyRelationName($relationName) . ' could not be saved.');
@@ -655,7 +655,7 @@ class SaveRelationsBehavior extends Behavior
             }
         }
         if ($owner->{$relationName} instanceof BaseActiveRecord) {
-            $owner->{$relationName}->save();
+            $owner->{$relationName}->save(false);
         }
     }
 
