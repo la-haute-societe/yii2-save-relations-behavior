@@ -15,7 +15,7 @@ trait SaveRelationsTrait
     {
         $loaded = parent::load($data, $formName);
         if ($loaded && $this->hasMethod('loadRelations')) {
-            $this->_prepareLoadData($data);
+            $this->_prepareLoadData($data, $formName);
 
             $this->loadRelations($data);
         }
@@ -25,7 +25,7 @@ trait SaveRelationsTrait
     /**
      * @param $data
      */
-    private function _prepareLoadData(&$data) {
+    private function _prepareLoadData(&$data, $formName) {
         $scope = $formName === null ? $this->formName() : $formName;
 
         foreach ($this->relations as $key => $value) {
