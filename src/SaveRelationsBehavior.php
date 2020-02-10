@@ -547,7 +547,7 @@ class SaveRelationsBehavior extends Behavior
             } else {
                 $existingRecords[] = $relationModel;
             }
-            if (count($relationModel->dirtyAttributes)) {
+            if (count($relationModel->dirtyAttributes) || count($this->_newRelationValue)) {
                 if ($relationModel->validate()) {
                     $relationModel->save();
                 } else {
