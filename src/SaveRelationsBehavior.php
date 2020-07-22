@@ -127,7 +127,8 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
-        if (in_array($name, $this->_relations)) {
+        $safeAttributes = $owner->safeAttributes();
+        if (in_array($name, $this->_relations) && in_array($name, $safeAttributes)) {
             Yii::debug("Setting {$name} relation value", __METHOD__);
             /** @var ActiveQuery $relation */
             $relation = $owner->getRelation($name);
