@@ -277,11 +277,16 @@ class SaveRelationsBehavior extends Behavior
 
         /** @var BaseActiveRecord $relationModel */
         $relationModel = null;
-        if (!empty($fks)) {
-            $relationModel = $modelClass::findOne($fks);
+        if ($this->owner->$relationName instanceof $modelClass) {
+            $relationModel = $this->owner->$relationName;
         }
-        if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = new $modelClass;
+        if (!$relationModel) {
+            if (!empty($fks)) {
+                $relationModel = $modelClass::findOne($fks);
+            }
+            if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
+                $relationModel = new $modelClass;
+            }
         }
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
