@@ -31,11 +31,5 @@
     "config": {
         "process-timeout": 1800,
         "preferred-install": "dist"
-    },
-    "repositories": [
-        {
-            "type": "composer",
-            "url": "https://asset-packagist.org"
-        }
-    ]
+    }
 }
