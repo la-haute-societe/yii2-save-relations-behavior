@@ -31,6 +31,12 @@ class SaveRelationsBehavior extends Behavior
 
     public $relations = [];
     public $relationKeyName = self::RELATION_KEY_FORM_NAME;
+    /**
+     * Save only safe relation. Check as attribute.
+     * @see https://www.yiiframework.com/doc/guide/2.0/en/input-validation
+     * @var bool
+     */
+    public $checkRelationsSafe = false;
 
     private $_relations = [];
     private $_oldRelationValue = []; // Store initial relations value
@@ -729,6 +735,7 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
         foreach ($this->_relations as $relationName) {
+            if($this->checkRelationsSafe && !$owner->isAttributeSafe($relationName)) continue;
             $keyName = $this->_getRelationKeyName($relationName);
             if (array_key_exists($keyName, $data)) {
                 $owner->{$relationName} = $data[$keyName];
