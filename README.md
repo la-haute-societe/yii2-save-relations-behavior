@@ -2,11 +2,11 @@ Yii2 Active Record Save Relations Behavior
 ==========================================
 Automatically validate and save related Active Record models.
 
-[![Latest Stable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/stable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
-[![Total Downloads](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/downloads)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
+[![Latest Stable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/stable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
+[![Total Downloads](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/downloads)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
 [![Code Coverage](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/?branch=master)
 [![Build Status](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/badges/build.png?b=master)](https://scrutinizer-ci.com/g/la-haute-societe/yii2-save-relations-behavior/build-status/master)
-[![Latest Unstable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/unstable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior) 
+[![Latest Unstable Version](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/v/unstable)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
 [![License](https://poser.pugx.org/la-haute-societe/yii2-save-relations-behavior/license)](https://packagist.org/packages/la-haute-societe/yii2-save-relations-behavior)
 
 
@@ -14,9 +14,10 @@ Features
 --------
 - Both `hasMany()` and `hasOne()` relations are supported
 - Works with existing as well as new related models
-- Composite primary keys are supported
+- Compound primary keys are supported
 - Only pure Active Record API is used so it should work with any DB driver
 - As of 1.5.0 release, related records can now be deleted along with the main model
+- ⚠️ As of 2.0.0 release, relations attributes now honor the `safe` validation rule
 
 
 Installation
@@ -76,6 +77,15 @@ class Project extends \yii\db\ActiveRecord
         ];
     }
 
+    public function rules()
+    {
+        return [
+            [['name', 'company_id'], 'required'],
+            [['name'], 'unique', 'targetAttribute' => ['company_id', 'name']],
+            [['company', 'users', 'projectLinks', 'tags'], 'safe']
+        ];
+    }
+
     public function transactions()
     {
         return [
@@ -109,7 +119,7 @@ class Project extends \yii\db\ActiveRecord
     {
         return $this->hasMany(User::className(), ['id' => 'user_id'])->via('ProjectUsers');
     }
-    
+
     /**
      * @return ActiveQuery
      */
@@ -129,6 +139,8 @@ class Project extends \yii\db\ActiveRecord
 ```
 
 > Though not mandatory, it is highly recommended to activate the transactions for the owner model.
+> ⚠️ Relations attributes has to be defined as `safe` in owner model validation rules in order to be saved.
+
 
 
 Usage
@@ -167,7 +179,6 @@ Attributes of the related model will be massively assigned using the `load() met
 
 > **Note:**
 > Only newly created or changed related models will be saved.
-
 > See the PHPUnit tests for more examples.
 
 
@@ -177,8 +188,7 @@ In a many-to-many relation involving a junction table additional column values c
 See the configuration section for examples.
 
 > **Note:**
-> If junction table properties are configured for a relation the rows associated with the related models in the junction table will be deleted and inserted again on each saving
-> to ensure that changes to the junction table properties are saved too.
+> If junction table properties are configured for a relation, the rows associated with the related models in the junction table will be deleted and inserted again on each saving to ensure that changes to the junction table properties are saved too.
 
 
 Validation
@@ -200,7 +210,7 @@ For instance, in the following configuration, the `links ` related records will 
                 'relations' => ['company', 'users', 'links' => ['scenario' => Link::SOME_SCENARIO]]
             ],
         ];
-    }  
+    }
 ...
 ```
 
@@ -238,7 +248,7 @@ For example, related `projectLinks` records will automatically be deleted when t
 ...
 ```
 
-> **Note:**
+> **Note:**.
 > Every records related to the main model as they are defined in their `ActiveQuery` statement will be deleted.
 
 
@@ -274,12 +284,12 @@ $project = Project::findOne(1);
 $project->loadRelations(Yii::$app->request->post());
 ```
 
-You can even further simplify the process by adding the `SaveRelationsTrait` to your model.
-In that case, a call to the `load()` method will also automatically trigger a call to the `loadRelations()` method by using the same data, so you basically won't have to change your controllers.
+You can even further simplify the process by adding the `SaveRelationsTrait` to your model. In that case, a call to the `load()` method will also automatically trigger a call to the `loadRelations()` method by using the same data, so you basically won't have to change your controllers.
 
-The `relationKeyName` property can be used to decide how the relations data will be retrieved from the data parameter. 
+The `relationKeyName` property can be used to decide how the relations data will be retrieved from the data parameter.
 
 Possible constants values are:
+
 * `SaveRelationsBehavior::RELATION_KEY_FORM_NAME` (default): the key name will be computed using the model [`formName()`](https://www.yiiframework.com/doc/api/2.0/yii-base-model#formName()-detail) method
 * `SaveRelationsBehavior::RELATION_KEY_RELATION_NAME`: the relation name as defined in the behavior declarations will be used
 
@@ -288,10 +298,12 @@ Get old relations values
 ------------------------
 
 To retrieve relations value prior to there most recent modification until the model is saved, the following methods can be used:
+
 * `getOldRelation($name)`: Get a named relation old value.
 * `getOldRelations()`: Get an array of relations index by there name with there old values.
 
-> **Notes**
+> **Notes:**
+>
 > * If a relation has not been modified yet, its initial value will be returned
 > * Only relations defined in the behavior parameters will be returned
 
@@ -299,6 +311,7 @@ To retrieve relations value prior to there most recent modification until the mo
 Get dirty relations
 -------------------
 To deal with dirty (modified) relations since the model was loaded, the following methods can be used:
+
 * `getDirtyRelations()`: Get the relations that have been modified since they are loaded (name-value pairs)
 * `markRelationDirty($name)`: Mark a relation as dirty even if it's not been modified.
 

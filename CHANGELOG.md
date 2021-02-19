@@ -1,10 +1,18 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
-## [1.8.0] Unreleased
+## [2.0.0] Unreleased
+
+> This release contains breaking changes.
+> Update your models rules to include relations attributes as `safe`.
+
+### Changed
+
+- Relations now honor the `safe` validation rule (thx @artemryzhov)
 
 ### Fixed
 
-- Fix #57: Better nested models support (thx @malinink)
+- Fix #57: Fix nested relations save, on dirty attributes not present (thx @malinink)
+- Fix #55: Prevent model double validation when not necessary (thx @leandrogehlen)
 
 ## [1.7.2]
 

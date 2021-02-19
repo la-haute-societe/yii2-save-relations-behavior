@@ -53,7 +53,7 @@ class Project extends \yii\db\ActiveRecord
         return [
             [['name', 'company_id'], 'required'],
             [['name'], 'unique', 'targetAttribute' => ['company_id', 'name']],
-            [['company', 'links', 'users'], 'safe']
+            [['company', 'links', 'users', 'contacts', 'images', 'projectLinks', 'tags'], 'safe']
         ];
     }
 
