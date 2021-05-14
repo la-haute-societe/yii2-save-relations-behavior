@@ -281,7 +281,7 @@ class SaveRelationsBehavior extends Behavior
             $relationModel = $modelClass::findOne($fks);
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = new $modelClass;
+            $relationModel = Yii::createObject($modelClass);
         }
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
@@ -769,7 +769,7 @@ class SaveRelationsBehavior extends Behavior
                 $relation = $owner->getRelation($relationName);
                 $modelClass = $relation->modelClass;
                 /** @var ActiveQuery $relationalModel */
-                $relationalModel = new $modelClass;
+                $relationalModel = Yii::createObject($modelClass);
                 $keyName = $relationalModel->formName();
                 break;
             default:
