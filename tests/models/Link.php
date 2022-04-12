@@ -38,7 +38,7 @@ class Link extends \yii\db\ActiveRecord
             [['language', 'name', 'link'], 'required'],
             [['name'], 'unique', 'targetAttribute' => ['language', 'name']],
             [['link'], 'url', 'on' => [self::SCENARIO_FIRST]],
-            [['link_type_id'], 'safe']
+            [['link_type_id', 'linkType'], 'safe']
         ];
     }
 

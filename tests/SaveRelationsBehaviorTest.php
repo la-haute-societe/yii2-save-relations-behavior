@@ -270,7 +270,7 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
 
     public function testHasOneRelationsShouldNotBeSavedFail()
     {
-        $project = New Project();
+        $project = new Project();
         $company = new Company();
         $company->name = "Oracle";
         $project->company = $company;
@@ -1027,5 +1027,18 @@ class SaveRelationsBehaviorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($project->company->users[0]->username, "New user");
         $this->assertCount(1, $project->users);
         $this->assertEquals($project->users[0]->username, "Another user");
+    }
+
+    public function testSaveExistingHasOneRelation()
+    {
+        $project = Project::findOne(1);
+        $project->company = [
+            'id'   => 1,
+            'name' => 'new company'
+        ];
+        $this->assertTrue($project->save(), 'Project could not be saved ' . VarDumper::dumpAsString($project->getErrors()));
+        $project = Project::findOne(1);
+        $this->assertEquals('new company', $project->company->name);
+        $this->assertEquals(1, $project->company->id);
     }
 }

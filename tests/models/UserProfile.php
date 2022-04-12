@@ -41,6 +41,7 @@ class UserProfile extends \yii\db\ActiveRecord
             [['user_id'], 'unique'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
             [['agree'], 'required', 'on' => 'insert'],
+            ['user', 'safe']
         ];
     }
 

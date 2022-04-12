@@ -128,7 +128,7 @@ class SaveRelationsBehavior extends Behavior
     {
         /** @var BaseActiveRecord $owner */
         $owner = $this->owner;
-        if (in_array($name, $this->_relations)) {
+        if (in_array($name, $this->_relations) && in_array($name, $owner->safeAttributes())) {
             Yii::debug("Setting {$name} relation value", __METHOD__);
             /** @var ActiveQuery $relation */
             $relation = $owner->getRelation($name);
@@ -547,9 +547,7 @@ class SaveRelationsBehavior extends Behavior
         foreach ($owner->{$relationName} as $i => $relationModel) {
             if ($relationModel->isNewRecord) {
                 if (!empty($relation->via)) {
-                    if ($relationModel->validate()) {
-                        $relationModel->save();
-                    } else {
+                    if (!$relationModel->save()) {
                         $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName, $i));
                         throw new DbException('Related record ' . self::prettyRelationName($relationName, $i) . ' could not be saved.');
                     }
@@ -559,10 +557,8 @@ class SaveRelationsBehavior extends Behavior
             } else {
                 $existingRecords[] = $relationModel;
             }
-            if (count($relationModel->dirtyAttributes)) {
-                if ($relationModel->validate()) {
-                    $relationModel->save();
-                } else {
+            if (count($relationModel->dirtyAttributes) || count($this->_newRelationValue)) {
+                if (!$relationModel->save()) {
                     $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName));
                     throw new DbException('Related record ' . self::prettyRelationName($relationName) . ' could not be saved.');
                 }

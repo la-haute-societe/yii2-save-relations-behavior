@@ -1,11 +1,29 @@
 # Yii2 Active Record Save Relations Behavior Change Log
 
-## [1.7.2]
+## [2.0.0] Unreleased
+
+> This release contains breaking changes.
+> Update your models rules to include relations attributes as `safe`.
+
+### Changed
+
+- Relations now honor the `safe` validation rule (thx @artemryzhov)
+
 ### Fixed
+
+- Fix #57: Fix nested relations save, on dirty attributes not present (thx @malinink)
+- Fix #55: Prevent model double validation when not necessary (thx @leandrogehlen)
+
+## [1.7.2]
+
+### Fixed
+
 - Fix #45: Newly created Has One relations were not deleted in case owner model validation failed (thx @douglasgsouza)
 
 ## [1.7.1]
+
 ### Fixed
+
 - Fix #23: Relational data was not loaded for nested relational models (thx @toreonify)
 
 ## [1.7.0]
@@ -82,7 +100,8 @@
 - False positive `testLoadRelationsShouldSucceed` test case
 
 ### Changed
-- afterSave throw exception if a related record fail to be saved. In that case, a database rollback is triggered (when relevant) and an error is attached to the according relation attribute 
+
+- afterSave throw exception if a related record fail to be saved. In that case, a database rollback is triggered (when relevant) and an error is attached to the according relation attribute
 - related record are now correctly updated based on there primary key (Thanks to @DD174)
 
 ## [1.2.0]

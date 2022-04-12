@@ -35,6 +35,7 @@ class ProjectNoTransactions extends \yii\db\ActiveRecord
         return [
             [['name', 'company_id'], 'required'],
             [['name'], 'unique', 'targetAttribute' => ['company_id', 'name']],
+            [['company', 'users', 'links'], 'safe']
         ];
     }
 
